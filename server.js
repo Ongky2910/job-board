@@ -23,19 +23,12 @@ app.get("/", (req, res) => {
   res.send("Welcome to the Job Board API!");
 });
 
+// Rute pekerjaan menggunakan jobRoutes
+app.use("/api/jobs", jobRoutes); 
+
 // Rute yang dilindungi dan autentikasi
-app.use("/api/auth", authRoutes);  // Rute untuk autentikasi
-app.use("/api", protectedRoute);   // Rute yang dilindungi
-
-// Rute pekerjaan
-app.use("/api/jobs", jobRoutes);  // Rute pekerjaan
-
-// Menampilkan informasi rute pekerjaan (opsional untuk debugging)
-jobRoutes.stack.forEach((layer) => {
-  if (layer.route) {
-    console.log(layer.route.path);  // Menampilkan setiap path rute yang terdaftar untuk jobRoutes
-  }
-});
+app.use("/api/auth", authRoutes);
+app.use("/api", protectedRoute);
 
 // Koneksi ke MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -44,13 +37,6 @@ mongoose.connect(process.env.MONGO_URI)
     console.error("MongoDB connection error: ", error);
     process.exit(1); // Keluar jika koneksi gagal
   });
-
-// Menampilkan semua rute yang terdaftar (opsional untuk debugging)
-app._router.stack.forEach((middleware) => {
-  if (middleware.route) {
-    console.log(middleware.route.path);
-  }
-});
 
 // Memulai server
 const PORT = process.env.PORT || 5001;

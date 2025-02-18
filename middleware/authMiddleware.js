@@ -17,7 +17,8 @@ const protect = (req, res, next) => {
   
     // Pastikan ada id di decoded.user sebelum melanjutkan
     if (decoded.user && decoded.user.id) {
-      req.user = decoded.user; // Set user data di req.user
+      req.user = decoded.user; 
+      console.log("User authenticated:", req.user);
       next(); // Panggil middleware selanjutnya
     } else {
       return res.status(400).json({ message: "User ID is missing from token" });

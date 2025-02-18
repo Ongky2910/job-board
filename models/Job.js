@@ -40,7 +40,13 @@ const jobSchema = new mongoose.Schema({
     min: { type: Number },
     max: { type: Number }
   },
-  category: { type: String },  
+  category: { 
+    type: String, 
+  },
+  location: { 
+    type: String, // Menambahkan field location
+    required: false, // Tidak wajib jika lokasi tidak tersedia
+  },
 });
 
 const Job = mongoose.model("Job", jobSchema);

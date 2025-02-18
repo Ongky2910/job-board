@@ -1,43 +1,53 @@
-const axios = require('axios');
-const Job = require('../models/Job');
+const axios = require("axios");
+const Job = require("../models/Job");
 
+// ✅ Middleware autentikasi HARUS sudah diterapkan sebelum fungsi ini dipanggil
 console.log("Job Controller Loaded");
 
-// Mendapatkan pekerjaan yang diposting oleh pengguna
+// ✅ Mendapatkan daftar pekerjaan yang diposting oleh pengguna
 const getUserJobList = async (req, res) => {
-  console.log('User:', req.user); // Log untuk memeriksa user
-
-  const userId = req.user?.id;  // Pastikan req.user sudah ada
-  if (!userId) {
-    console.log("User ID is missing");
-    return res.status(400).json({ message: "User ID is missing" });
-  }
-
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-
+  console.log('User:', req.user); 
   try {
-    console.log("Fetching jobs for user ID:", userId);
-    const jobs = await Job.find({ postedBy: userId })
-      .populate("postedBy", "name email")
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is missing" });
+    }
 
+    console.log("Fetching jobs for user ID:", userId);
+
+    const { location, job_type } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Build the filter criteria, ensuring optional parameters are handled properly
+    const filterCriteria = {
+      
+      postedBy: userId,
+      ...(location && { location }),  // Only include location if provided
+      ...(job_type && { category: job_type }), // Ensure job_type matches the category field in your schema
+    };
+
+    // Fetch jobs with the given filter criteria, using pagination
+    const jobs = await Job.find(filterCriteria)
+      .populate("postedBy", "name email") // Populating user info
+      .skip((page - 1) * limit) // Pagination logic
+      .limit(limit); // Limit results to the specified limit
+
+      console.log("Fetched jobs:", jobs);
+    // Return the jobs
     res.status(200).json(jobs);
   } catch (err) {
     console.error("Error retrieving jobs:", err);
-    res.status(500).json({ message: "Error retrieving jobs" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 
+
+// ✅ Membuat pekerjaan baru
 const createJob = async (req, res) => {
-  console.log("createJob executed");
   try {
     const { title, company, description } = req.body;
-    console.log("Received job data:", { title, company, description });
-
-    // Validasi data input
     if (!title || !company || !description) {
       return res.status(400).json({ message: "Title, company, and description are required" });
     }
@@ -50,197 +60,156 @@ const createJob = async (req, res) => {
     });
 
     await newJob.save();
-    console.log("Job created successfully:", newJob);
     res.status(201).json(newJob);
   } catch (err) {
     console.error("Error creating job:", err);
-    res.status(500).json({ message: "Error creating job" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// ✅ Mengupdate pekerjaan
 const updateJob = async (req, res) => {
-  console.log("updateJob executed for job ID:", req.params.id);
   try {
     const { title, company, description } = req.body;
-    const jobId = req.params.id;
-    console.log("Updating job with new data:", { title, company, description });
-
-    // Validasi data input
     if (!title || !company || !description) {
       return res.status(400).json({ message: "Title, company, and description are required" });
     }
 
     const updatedJob = await Job.findByIdAndUpdate(
-      jobId,
+      req.params.id,
       { title, company, description },
       { new: true }
     );
 
     if (!updatedJob) {
-      console.log("Job not found for ID:", jobId);
       return res.status(404).json({ message: "Job not found" });
     }
 
-    console.log("Job updated successfully:", updatedJob);
     res.status(200).json(updatedJob);
   } catch (err) {
     console.error("Error updating job:", err);
-    res.status(500).json({ message: "Error updating job" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// ✅ Menghapus pekerjaan
 const deleteJob = async (req, res) => {
-  console.log("deleteJob executed for job ID:", req.params.id);
   try {
-    const jobId = req.params.id;
-    const deletedJob = await Job.findByIdAndDelete(jobId);
+    const deletedJob = await Job.findByIdAndDelete(req.params.id);
 
     if (!deletedJob) {
-      console.log("Job not found for ID:", jobId);
       return res.status(404).json({ message: "Job not found" });
     }
 
-    console.log("Job deleted successfully:", deletedJob);
     res.status(200).json({ message: "Job deleted successfully" });
   } catch (err) {
     console.error("Error deleting job:", err);
-    res.status(500).json({ message: "Error deleting job" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// ✅ Melamar pekerjaan
 const applyJob = async (req, res) => {
-  const jobId = req.params.id;
-  const userId = req.user.id;
-  console.log(`User ${userId} applying for job ID: ${jobId}`);
-  
   try {
-    const job = await Job.findById(jobId);
+    const job = await Job.findById(req.params.id);
     if (!job) {
-      console.log("Job not found for ID:", jobId);
       return res.status(404).json({ message: "Job not found" });
     }
 
-    // Initialize appliedUsers array if not already set
     if (!job.appliedUsers) {
       job.appliedUsers = [];
     }
 
-    if (job.appliedUsers.includes(userId)) {
-      console.log("User has already applied to this job");
+    if (job.appliedUsers.includes(req.user.id)) {
       return res.status(400).json({ message: "You have already applied to this job" });
     }
 
-    job.appliedUsers.push(userId);
+    job.appliedUsers.push(req.user.id);
     await job.save();
 
-    console.log("Application successful for job ID:", jobId);
     res.status(200).json({ message: "Application successful" });
   } catch (err) {
     console.error("Error applying to job:", err);
-    res.status(500).json({ message: "Error applying to job" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// ✅ Mendapatkan pekerjaan yang telah dilamar
 const getAppliedJobs = async (req, res) => {
-  console.log("Getting applied jobs for user ID:", req.user.id);
   try {
     const jobs = await Job.find({ appliedUsers: req.user.id }).populate("postedBy", "name email");
-    console.log("Applied jobs retrieved:", jobs);
     res.status(200).json(jobs);
   } catch (err) {
     console.error("Error retrieving applied jobs:", err);
-    res.status(500).json({ message: "Error retrieving applied jobs" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// ✅ Menyimpan pekerjaan ke daftar favorit
 const saveJob = async (req, res) => {
-  const jobId = req.params.id;
-  const userId = req.user.id;
-  console.log(`User ${userId} saving job ID: ${jobId}`);
-
   try {
-    const job = await Job.findById(jobId);
+    const job = await Job.findById(req.params.id);
     if (!job) {
-      console.log("Job not found for ID:", jobId);
       return res.status(404).json({ message: "Job not found" });
     }
 
-    // Initialize savedUsers array if not already set
     if (!job.savedUsers) {
       job.savedUsers = [];
     }
 
-    if (job.savedUsers.includes(userId)) {
-      console.log("User has already saved this job");
+    if (job.savedUsers.includes(req.user.id)) {
       return res.status(400).json({ message: "You have already saved this job" });
     }
 
-    job.savedUsers.push(userId);
+    job.savedUsers.push(req.user.id);
     await job.save();
 
-    console.log("Job saved successfully for job ID:", jobId);
     res.status(200).json({ message: "Job saved successfully" });
   } catch (err) {
     console.error("Error saving job:", err);
-    res.status(500).json({ message: "Error saving job" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// ✅ Mendapatkan daftar pekerjaan yang disimpan
 const getSavedJobs = async (req, res) => {
-  console.log("Getting saved jobs for user ID:", req.user.id);
   try {
     const jobs = await Job.find({ savedUsers: req.user.id }).populate("postedBy", "name email");
-    console.log("Saved jobs retrieved:", jobs);
     res.status(200).json(jobs);
   } catch (err) {
     console.error("Error retrieving saved jobs:", err);
-    res.status(500).json({ message: "Error retrieving saved jobs" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-async function getExternalJobListings(req, res) {
-  const { location, job_type, app_id, app_key } = req.query;
-  
-  console.log('Received Params:', req.query); 
-  
+// ✅ Mengambil daftar pekerjaan dari API eksternal
+const getExternalJobListings = async (req, res) => {
   try {
-    const response = await axios.get('https://api.adzuna.com/v1/api/jobs/us/search/1', {
+    const { location, job_type, app_id, app_key } = req.query;
+    const response = await axios.get("https://api.adzuna.com/v1/api/jobs/us/search/1", {
       params: {
-        location: location || 'remote',
-        job_type: job_type || 'fulltime',
-        app_id: app_id || 'b258b0a3',
-        app_key: app_key || '63e9e6b82c2775f5e164d60d8fee0012',
-      }
+        location: location || "remote",
+        job_type: job_type || "fulltime",
+        app_id: app_id || "your_app_id",
+        app_key: app_key || "your_app_key",
+      },
     });
+
     res.json(response.data);
   } catch (error) {
-    console.error('Error fetching jobs from external API:', error);
-
-    // Menampilkan detail error dari respons API
-    if (error.response) {
-      console.error('Response error status:', error.response.status);
-      console.error('Response error data:', error.response.data);
-      res.status(error.response.status).json({ message: error.response.data });
-    } else if (error.request) {
-      // Jika tidak ada respons
-      console.error('Request error:', error.request);
-      res.status(500).json({ message: 'No response received from API' });
-    } else {
-      // Kesalahan lain
-      console.error('Unknown error:', error.message);
-      res.status(500).json({ message: 'An unknown error occurred' });
-    }
+    console.error("Error fetching jobs from external API:", error.message);
+    res.status(500).json({ message: "Error fetching external job listings" });
   }
-}
+};
 
-module.exports = { 
-  getUserJobList, 
-  createJob, 
-  updateJob, 
-  deleteJob, 
-  applyJob, 
-  getAppliedJobs, 
-  saveJob, 
-  getSavedJobs, 
-  getExternalJobListings 
+module.exports = {
+  getUserJobList,
+  createJob,
+  updateJob,
+  deleteJob,
+  applyJob,
+  getAppliedJobs,
+  saveJob,
+  getSavedJobs,
+  getExternalJobListings,
 };
