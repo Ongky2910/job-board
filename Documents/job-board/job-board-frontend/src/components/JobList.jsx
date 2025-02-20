@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import useJobs from "../hooks/useJobs";
 import { useEffect } from "react";
 
+
 const JobList = () => {
   const {
     jobs,
@@ -32,26 +33,6 @@ const JobList = () => {
         </h2>
 
         {/* 🔹 Search & Filter */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <input
-            type="text"
-            placeholder="Search jobs..."
-            className="w-full md:w-1/2 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <select
-            className="w-full md:w-1/4 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <option value="All">All</option>
-            <option value="Full-time">Full-time</option>
-            <option value="Part-time">Part-time</option>
-            <option value="Contract">Contract</option>
-          </select>
-        </div>
-
         {/* 🔹 Job List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoading ? (
@@ -82,16 +63,17 @@ const JobList = () => {
                   • {job.contract_type || "Contract type unknown"}
                 </p>
                 <div className="flex gap-2 mt-4">
+                  {/* 🔹 Update fungsi handleApplyJob dan handleSaveJob */}
+                  
                   <button
-                    onClick={() =>
-                      handleApplyJob && handleApplyJob(job._id || job.id)
-                    }
+                    onClick={() => handleApplyJob(job._id || job.id)} // ✅ Hanya kirim ID
                     className="bg-green-600 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-green-700 transition"
                   >
                     Apply
                   </button>
+
                   <button
-                    onClick={() => handleSaveJob(job._id || job.id)}
+                    onClick={() => handleSaveJob(job._id || job.id)} // ✅ Hanya kirim ID
                     className="bg-yellow-500 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-yellow-600 transition"
                   >
                     Save
@@ -107,7 +89,7 @@ const JobList = () => {
         </div>
 
         {/* 🔹 Pagination */}
-        {totalPages > 1 && (
+        {totalPages > 10 && (
           <div className="flex justify-center mt-6 space-x-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}

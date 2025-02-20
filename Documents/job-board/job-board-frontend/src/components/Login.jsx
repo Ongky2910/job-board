@@ -32,9 +32,7 @@ export default function Login() {
       await loginUser(formData.email, formData.password);
       toast.success("✅ Login successful!", { autoClose: 1500 });
       navigate("/");
-      console.log("✅ Login completed, checking localStorage...");
-      console.log("🔍 Stored token:", localStorage.getItem("token"));
-      console.log("🔍 Stored user:", localStorage.getItem("user"));
+     
     } catch (error) {
       console.error("❌ Login Error:", error);
       setError(error.response?.data?.message || "Email or Password is incorrect. Please try again.");
