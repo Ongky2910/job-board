@@ -1,37 +1,121 @@
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
+import { useUser } from "../context/UserContext";
 
-const useJobs = () => {
-  const [jobs, setJobs] = useState([]); // Menyimpan semua pekerjaan
-  const [filteredJobs, setFilteredJobs] = useState([]); // Menyimpan pekerjaan yang difilter
-  const [isLoading, setIsLoading] = useState(true); // Status loading
+const BASE_URL = "http://localhost:5001/api";
+
+const useJobs = (searchTerm = "", filterType = "All", currentPage = 1) => {
+  const { user, isUserLoading, logoutUser } = useUser(); 
+  const [jobs, setJobs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [totalPages, setTotalPages] = useState(1);
+  const jobsPerPage = 6;
+  const [searchTermState, setSearchTerm] = useState(searchTerm);
+  const [filterTypeState, setFilterType] = useState(filterType);
+  const [currentPageState, setCurrentPage] = useState(currentPage);
 
   useEffect(() => {
-    // Ambil data pekerjaan dari API
-    axios
-      .get("/api/jobs") // Ganti dengan URL API yang sesuai
-      .then((response) => {
-        console.log("Jobs fetched:", response.data); 
-        setJobs(response.data);
-        setFilteredJobs(response.data); // Awalnya semua pekerjaan ditampilkan
-        setIsLoading(false); // Ubah status loading setelah data selesai diambil
-      })
-      .catch((error) => {
-        console.error("Error fetching jobs:", error);
-        setIsLoading(false); // Tetap ubah status loading ke false walaupun terjadi error
-      });
-  }, []); // useEffect hanya berjalan sekali saat komponen pertama kali dimuat
+    if (isUserLoading) return;
+    if (!user || !user.id) {
+      setError("User not authenticated.");
+      setIsLoading(false);
+      return;
+    }
 
-  // Fungsi untuk memfilter pekerjaan berdasarkan pencarian
-  const filterJobs = (searchTerm) => {
-    const filtered = jobs.filter((job) =>
-      job.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredJobs(filtered);
+    const fetchJobs = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const params = {
+          user_id: user.id,
+          search: searchTerm.trim(),
+          job_type: filterType === "All" ? "" : filterType,
+          page: currentPage,
+          limit: jobsPerPage,
+        };
+
+        const [localJobsResponse, externalJobsResponse] = await Promise.all([
+          axios.get(`${BASE_URL}/jobs`, {
+            params,
+            withCredentials: true, 
+          }),
+          axios.get(`${BASE_URL}/jobs/external-jobs`, {
+            params,
+            withCredentials: true, 
+          }),
+        ]);
+
+        setJobs([
+          ...(Array.isArray(localJobsResponse.data.jobs) ? localJobsResponse.data.jobs : []),
+          ...(Array.isArray(externalJobsResponse.data.results) ? externalJobsResponse.data.results : []),
+        ]);
+
+        setTotalPages(localJobsResponse.data.totalPages || 1);
+      } catch (err) {
+        console.error("❌ Error occurred:", err);
+
+        if (err.response?.status === 401) {
+          console.warn("⚠️ Token expired, logging out...");
+          logoutUser();
+        } else {
+          setError(err.response?.data?.message || "Failed to fetch jobs.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, [searchTerm, filterType, currentPage, user, isUserLoading]);
+
+  // 🔹 Fungsi untuk menyimpan pekerjaan
+  const handleSaveJob = async (jobId) => {
+    try {
+      console.log("Saving job at:", `${BASE_URL}/jobs/${jobId}/save`);
+      const response = await axios.post(
+        `${BASE_URL}/jobs/${jobId}/save`,
+        { jobId },
+        { withCredentials: true }
+      );
+      alert(response.data.message || "Job saved successfully!");
+    } catch (err) {
+      console.error("Failed to save job:", err.response?.data || err);
+      alert(err.response?.data?.message || "Failed to save job.");
+    }
   };
 
-  return { jobs, filteredJobs, setFilteredJobs, isLoading, filterJobs };
+  // 🔹 Fungsi untuk melamar pekerjaan
+  const handleApplyJob = async (jobId) => {
+    try {
+      console.log("Applying for job at:", `${BASE_URL}/jobs/${jobId}/apply`);
+      const response = await axios.post(
+        `${BASE_URL}/jobs/${jobId}/apply`,
+        { jobId },
+        { withCredentials: true }
+      );
+      alert(response.data.message || "Applied successfully!");
+    } catch (err) {
+      console.error("Failed to apply for job:", err.response?.data || err);
+      alert(err.response?.data?.message || "Failed to apply for job.");
+    }
+  };
+
+  return {
+    jobs,
+    isLoading,
+    error,
+    totalPages,
+    searchTerm: searchTermState,
+    setSearchTerm,
+    filterType: filterTypeState,
+    setFilterType,
+    currentPage: currentPageState,
+    setCurrentPage,
+    handleSaveJob,
+    handleApplyJob,
+  };
 };
 
 export default useJobs;

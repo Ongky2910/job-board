@@ -1,93 +1,95 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-// Membuat Context untuk User
+console.log("✅ UserProvider berhasil dipasang!");
+
 const UserContext = createContext();
 
-export function useUser() {
+export const useUser = () => {
   return useContext(UserContext);
-}
+};
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // State untuk pengguna
-  const [appliedJobs, setAppliedJobs] = useState([]); // State untuk pekerjaan yang dilamar
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Load user dari localStorage saat pertama kali aplikasi dibuka
+  // ✅ Fungsi Login User
+  const loginUser = async (email, password) => {
+    try {
+      console.log("🟢 Sending login request...", email, password);
+      const response = await axios.post(
+        "http://localhost:5001/api/auth/login",
+        { email, password },
+        { withCredentials: true } // Harusnya token tersimpan di cookie
+      );
+  
+      console.log("✅ Login Response:", response.data);
+  
+      if (response.data.user) {
+        console.log("✅ Login Successful:", response.data);
+        setUser(response.data.user);
+  
+        // Cek apakah ada token
+        console.log("🔑 Token dari response:", response.data.token);
+        if (!response.data.token) {
+          console.error("❌ Token tidak ditemukan dalam response!");
+        }
+  
+        navigate("/dashboard");
+      } else {
+        console.error("❌ Response tidak valid:", response.data);
+        setError("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("❌ Login Error:", error.response?.data || error.message);
+      setError(error.response?.data?.message || "Login failed, please try again.");
+    }
+  };
+  
+
+  // ✅ Fungsi Logout User
+  const logoutUser = async () => {
+    try {
+      console.log("🚪 Logging out user...");
+      await axios.post(
+        "http://localhost:5001/api/auth/logout",
+        {},
+        { withCredentials: true } // Pastikan cookie dihapus
+      );
+      setUser(null); // Reset user state
+      console.log("✅ User logged out successfully!");
+      navigate("/login"); // Redirect ke halaman login
+    } catch (error) {
+      console.error("❌ Logout failed:", error.response?.data || error.message);
+    }
+  };
+
+  // ✅ Fungsi untuk mengecek user saat pertama kali load
+  const checkAuth = async () => {
+    try {
+      console.log("🔍 Checking user authentication...");
+      const response = await axios.get(
+        "http://localhost:5001/api/auth/verify-token",
+        { withCredentials: true }
+      );
+      console.log("✅ Authenticated User:", response.data.user);
+      setUser(response.data.user);
+    } catch (error) {
+      console.warn("⚠️ User not authenticated:", error.response?.data || error.message);
+      setUser(null);
+    }
+    setIsUserLoading(false);
+  };
+
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedJobs = localStorage.getItem("appliedJobs");
-
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser)); // Memuat user dari localStorage
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        localStorage.removeItem("user");
-      }
-    }
-
-    if (storedJobs) {
-      try {
-        setAppliedJobs(JSON.parse(storedJobs)); // Memuat pekerjaan yang dilamar dari localStorage
-      } catch (error) {
-        console.error("Error parsing applied jobs:", error);
-        localStorage.removeItem("appliedJobs");
-      }
-    }
+    checkAuth(); // Panggil fungsi cek auth saat aplikasi dimulai
   }, []);
 
-  // Fungsi untuk login dan menyimpan data pengguna
-  const loginUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData)); // Menyimpan data pengguna ke localStorage
-  };
-
-  // Fungsi untuk logout dan menghapus data pengguna
-  const logoutUser = () => {
-    setUser(null);
-    localStorage.removeItem("user"); // Menghapus data pengguna dari localStorage
-  };
-
-  // Fungsi untuk menambah pekerjaan yang dilamar
-  const addAppliedJob = (job) => {
-    setAppliedJobs((prevJobs) => {
-      const updatedJobs = [...prevJobs, job];
-      localStorage.setItem("appliedJobs", JSON.stringify(updatedJobs)); // Menyimpan daftar pekerjaan yang dilamar ke localStorage
-
-      // Update state user agar data pekerjaan yang dilamar ada di dalam user
-      setUser((prevUser) => ({
-        ...prevUser,
-        appliedJobs: updatedJobs,
-      }));
-
-      return updatedJobs;
-    });
-  };
-
-  // Fungsi untuk menghapus pekerjaan yang dilamar
-  const removeAppliedJob = (jobId) => {
-    const updatedJobs = appliedJobs.filter((job) => job.id !== jobId);
-    setAppliedJobs(updatedJobs);
-    localStorage.setItem("appliedJobs", JSON.stringify(updatedJobs)); // Menyimpan daftar pekerjaan yang dilamar setelah dihapus
-
-    // Update state user agar data pekerjaan yang dilamar ada di dalam user
-    setUser((prevUser) => ({
-      ...prevUser,
-      appliedJobs: updatedJobs,
-    }));
-  };
-
   return (
-    <UserContext.Provider
-      value={{
-        user, 
-        setUser, 
-        loginUser, 
-        logoutUser, 
-        appliedJobs, 
-        addAppliedJob, 
-        removeAppliedJob
-      }}
-    >
+    <UserContext.Provider value={{ user, setUser, loginUser, logoutUser, isUserLoading, error }}>
       {children}
     </UserContext.Provider>
   );

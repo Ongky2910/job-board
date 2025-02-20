@@ -1,116 +1,47 @@
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import axios from "axios";
+import useJobs from "../hooks/useJobs";
+import { useEffect } from "react";
 
-export default function JobList() {
-  const [jobs, setJobs] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
-  const jobsPerPage = 6;
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const JobList = () => {
+  const {
+    jobs,
+    isLoading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    filterType,
+    setFilterType,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    handleApplyJob,
+    handleSaveJob,
+  } = useJobs();
 
-  // Function to fetch jobs data
-  const fetchJobs = async () => {
-    try {
-      // Mengambil token dan ID pengguna dari localStorage
-      const token = localStorage.getItem("token");
-      const user = JSON.parse(localStorage.getItem("user")); // Mengambil user sebagai objek
-  
-      console.log("Token:", token); 
-      console.log("User:", user);
-  
-      if (!user || !user.id) {
-        console.error("User ID is missing or not found");
-        setError("User not authenticated.");
-        setLoading(false);
-        return;
-      }
-  
-      // Membuat konfigurasi header
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`, // Jika Anda menggunakan token JWT
-        },
-      };
-  
-      // Menyiapkan parameter request
-      const params = {
-        app_id: "b258b0a3",
-        app_key: "63e9e6b82c2775f5e164d60d8fee0012",
-        user_id: user.id, // Kirimkan ID pengguna sebagai parameter
-        location: "remote", // Atau gunakan nilai yang sesuai
-        job_type: "fulltime", // Atau gunakan nilai yang sesuai
-      };
-  
-      console.log("Request Params:", params); // Menampilkan parameter request yang akan dikirim
-  
-      // Melakukan permintaan GET
-      const response = await axios.get("http://localhost:5001/api/jobs", {
-        params: params, // Mengirimkan semua parameter sekaligus
-        ...config, // Menambahkan header ke konfigurasi
-      });
-  
-      // Tangani response
-      console.log("Jobs fetched:", response.data);
-      setJobs(response.data); // Misalnya, menyimpan data pekerjaan ke state
-      setLoading(false); // Menghentikan loading setelah data diterima
-  
-    } catch (error) {
-      console.error("Error fetching jobs:", error);
-      setError("Failed to fetch jobs.");
-      setLoading(false);
-    }
-  };
-  
-  
+  const filteredJobs = jobs;
 
-  // Call fetchJobs when component is mounted
-  useEffect(() => {
-    fetchJobs(); // Panggil fetchJobs hanya sekali saat komponen pertama kali di-mount
-  }, []);  // Array kosong memastikan hanya dipanggil sekali saat komponen mount
-
-
-const filteredJobs = Array.isArray(jobs) ? jobs.filter(
-  (job) =>
-    job.title?.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (filterType === "All" || job.contract_type === filterType)
-) : [];
-
-  console.log("Filtered Jobs: ", filteredJobs); // Debugging filtered jobs
-
-  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
-  console.log("Total Pages: ", totalPages); // Verifikasi jumlah halaman
-
-  const startIndex = (currentPage - 1) * jobsPerPage;
-  const selectedJobs = filteredJobs.slice(startIndex, startIndex + jobsPerPage);
-
-  console.log("Selected Jobs: ", selectedJobs); // Verifikasi pekerjaan yang dipilih
-
-  // Handling loading and error state
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
+  console.log("JobList component rendered");
+  console.log("JobList rendered", { filteredJobs, isLoading, error });
+  console.log("Fetched jobs:", jobs);
 
   return (
     <section id="jobs" className="py-16 bg-gray-100 dark:bg-gray-800">
       <div className="container mx-auto px-6">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
+        <h2 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-8">
           Latest Job Openings
         </h2>
 
-        {/* Search & Filter */}
+        {/* 🔹 Search & Filter */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <input
             type="text"
             placeholder="Search jobs..."
-            className="w-full md:w-1/2 p-2 border rounded-lg"
+            className="w-full md:w-1/2 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <select
-            className="w-full md:w-1/4 p-2 border rounded-lg"
+            className="w-full md:w-1/4 p-3 border rounded-lg shadow-sm focus:ring focus:ring-blue-300"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
@@ -121,38 +52,53 @@ const filteredJobs = Array.isArray(jobs) ? jobs.filter(
           </select>
         </div>
 
-        {/* Job List */}
+        {/* 🔹 Job List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {selectedJobs.length > 0 ? (
-            selectedJobs.map((job) => {
-              console.log("Rendering job: ", job); // Debugging log
-              return (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: job.id * 0.1 }}
-                  className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition"
-                >
-                  <h3 className="text-xl font-semibold text-blue-600">
-                    {job.title || "Title not available"}
-                  </h3>
-                  <p className="text-gray-700">
-                    {job.company?.display_name || "Company not listed"}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {job.location?.display_name || "Location not available"} •{" "}
-                    {job.contract_type || "Contract type not specified"}
-                  </p>
-                  <Link
-                    to={`/job/${job.id}`}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition"
+          {isLoading ? (
+            <div className="text-center col-span-full">Loading jobs...</div>
+          ) : error ? (
+            <div className="text-red-500 text-center col-span-full">
+              {error}
+            </div>
+          ) : filteredJobs.length > 0 ? (
+            filteredJobs.map((job, index) => (
+              <motion.div
+                key={job._id || job.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition"
+              >
+                <h3 className="text-xl font-semibold text-blue-600">
+                  {job.title || job.title_raw || "No title available"}
+                </h3>
+                <p className="text-gray-700">
+                  {job.company?.display_name ||
+                    job.company_name ||
+                    "No company listed"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {job.location?.display_name || job.location || "No location"}{" "}
+                  • {job.contract_type || "Contract type unknown"}
+                </p>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() =>
+                      handleApplyJob && handleApplyJob(job._id || job.id)
+                    }
+                    className="bg-green-600 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-green-700 transition"
                   >
-                    View Details
-                  </Link>
-                </motion.div>
-              );
-            })
+                    Apply
+                  </button>
+                  <button
+                    onClick={() => handleSaveJob(job._id || job.id)}
+                    className="bg-yellow-500 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-yellow-600 transition"
+                  >
+                    Save
+                  </button>
+                </div>
+              </motion.div>
+            ))
           ) : (
             <p className="text-center text-gray-500 col-span-full">
               No jobs found.
@@ -160,13 +106,13 @@ const filteredJobs = Array.isArray(jobs) ? jobs.filter(
           )}
         </div>
 
-        {/* Pagination */}
+        {/* 🔹 Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center mt-6">
+          <div className="flex justify-center mt-6 space-x-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 mx-1 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
             >
               Prev
             </button>
@@ -174,7 +120,7 @@ const filteredJobs = Array.isArray(jobs) ? jobs.filter(
               <button
                 key={index}
                 onClick={() => setCurrentPage(index + 1)}
-                className={`px-4 py-2 mx-1 rounded ${
+                className={`px-4 py-2 rounded ${
                   currentPage === index + 1
                     ? "bg-blue-600 text-white"
                     : "bg-gray-300 text-gray-700"
@@ -188,7 +134,7 @@ const filteredJobs = Array.isArray(jobs) ? jobs.filter(
                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))
               }
               disabled={currentPage === totalPages}
-              className="px-4 py-2 mx-1 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
             >
               Next
             </button>
@@ -197,4 +143,6 @@ const filteredJobs = Array.isArray(jobs) ? jobs.filter(
       </div>
     </section>
   );
-}
+};
+
+export default JobList;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "../context/UserContext"; // Import useUser
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -7,6 +8,7 @@ export default function Register() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { setUser } = useUser(); // Gunakan useUser untuk mengatur state user
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -28,25 +30,23 @@ export default function Register() {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       const { data } = await axios.post(`${apiUrl}/api/auth/register`, formData);
 
-      if (data.message === "User registered successfully") {
-        // Store user and token in localStorage after successful registration
-        localStorage.setItem("token", data.token); // Save token
-        localStorage.setItem("user", JSON.stringify(data.user)); // Save user object
-  
-        console.log("Storing user in localStorage:", data.user);
-console.log("Storing token in localStorage:", data.token);
-
-        toast.success("Registration successful! Please log in.", {
-          autoClose: 2000,  // Toast lebih cepat
+      if (data.user) {
+        console.log("✅ Registration successful!", data.user);
+        setUser(data.user); // Set user dari response
+        toast.success("Registration successful! Redirecting...", {
+          autoClose: 2000,
           theme: "colored",
         });
-  
-        setTimeout(() => navigate("/login"), 2500); 
+        setTimeout(() => navigate("/login"), 2500);
+      } else {
+        setError("Unexpected server response");
+        toast.error("Unexpected server response. Please try again.");
       }
+      
     } catch (error) {
-      if (error.response && error.response.data.message === "User already exists") {
+      if (error.response?.data?.message === "User already exists") {
         setError("Email is already registered. Please use a different email.");
-        toast.error("Email is already registered. Please use a different email.");
+        toast.error("Email is already registered.");
       } else {
         setError("Registration failed. Please try again.");
         toast.error("Registration failed! Please try again.");

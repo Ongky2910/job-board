@@ -1,33 +1,17 @@
-// PrivateRoute.jsx
-import { Navigate, Redirect, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Navigate, Outlet } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useUser } from "../context/UserContext";
 
-// Komponen ini akan melindungi route yang memerlukan autentikasi
-const PrivateRoute = ({ element }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Mengecek apakah token ada di localStorage
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsAuthenticated(true);
+const PrivateRoute = () => {
+const { user, isUserLoading } = useUser();
+
+console.log(" Cek user di PrivateRoute:", user);
+
+    if (isUserLoading) {
+      return <div className="flex justify-center items-center h-screen">Loading...</div>;
     }
-    setIsLoading(false);
-  }, []);
-
-  if (isLoading) {
-    // Anda bisa menampilkan loader sementara pengecekan autentikasi berlangsung
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    // Jika tidak terautentikasi, arahkan ke halaman login
-    return <Navigate to="/login" />;
-  }
-
-  // Jika sudah terautentikasi, tampilkan elemen yang diterima sebagai prop
-  return element;
+    return user ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 export default PrivateRoute;

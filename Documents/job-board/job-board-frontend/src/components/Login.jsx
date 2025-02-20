@@ -1,88 +1,48 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
-import axios from "axios";
 import { toast } from "react-toastify";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setUser } = useUser();
+  const { loginUser } = useUser(); // ✅ Perbaikan: Tidak ada karakter `/`
   const navigate = useNavigate();
 
-  // Handle input field change
+  console.log("✅ useUser() return value:", loginUser);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Handle login form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
-    // Validasi form input
+  
     if (!formData.email || !formData.password) {
       setError("Please fill in all fields");
       setLoading(false);
       return;
     }
-
-    // Validasi format email
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailPattern.test(formData.email)) {
-      setError("Please enter a valid email address");
-      setLoading(false);
-      return;
-    }
-
+  
     try {
-      const response = await axios.post(
-        "http://localhost:5001/api/auth/login", // Ganti dengan URL API yang sesuai
-        formData
-      );
-      console.log("Login Response:", response);
-
-      if (response.data.token && response.data.user) {
-        const { token, user } = response.data;
-
-        // Pastikan user memiliki properti name
-        if (!user.name) {
-          user.name = "user"; // Atau nilai default lain
-        }
-      // Simpan token dan user ke localStorage
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify({
-        id: user.id,
-        email: user.email,
-        name: user.name
-      }));
-      console.log(localStorage.getItem("userProfile"));
-
-      // Update state user di context
-      setUser(user);
-
-        console.log("User saved:", user);
-        console.log("Token stored:", token);
-
-        toast.success("Login successful!", { autoClose: 2000 });
-
-        // Redirect setelah 2 detik
-        setTimeout(() => navigate("/"), 2000);
-      } else {
-        setError("Email/Password is incorrect. Please try again.");
-      }
+      console.log("🟢 Trying to login with:", formData);
+      await loginUser(formData.email, formData.password);
+      toast.success("✅ Login successful!", { autoClose: 1500 });
+      navigate("/");
+      console.log("✅ Login completed, checking localStorage...");
+      console.log("🔍 Stored token:", localStorage.getItem("token"));
+      console.log("🔍 Stored user:", localStorage.getItem("user"));
     } catch (error) {
-      console.error(
-        "Login Error:",
-        error.response?.data || error.message || error
-      );
-      setError("Email / Password is incorrect. Please try again.");
+      console.error("❌ Login Error:", error);
+      setError(error.response?.data?.message || "Email or Password is incorrect. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="w-full max-w-md mx-auto mt-16">
@@ -121,9 +81,7 @@ export default function Login() {
       </form>
       <p className="mt-4 text-center">
         Don't have an account?{" "}
-        <a href="/register" className="text-blue-600">
-          Register
-        </a>
+        <a href="/register" className="text-blue-600">Register</a>
       </p>
     </div>
   );
