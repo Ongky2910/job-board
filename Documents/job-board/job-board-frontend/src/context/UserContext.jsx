@@ -2,19 +2,20 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-console.log("✅ UserProvider berhasil dipasang!");
 
 const UserContext = createContext();
 
-export const useUser = () => {
-  return useContext(UserContext);
-};
+export const useUser = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    checkAuth(); // Mengecek login saat pertama kali app dijalankan
+  }, []);
 
   // ✅ Fungsi Login User
   const loginUser = async (email, password) => {
@@ -83,10 +84,6 @@ export const UserProvider = ({ children }) => {
     }
     setIsUserLoading(false);
   };
-
-  useEffect(() => {
-    checkAuth(); // Panggil fungsi cek auth saat aplikasi dimulai
-  }, []);
 
   return (
     <UserContext.Provider value={{ user, setUser, loginUser, logoutUser, isUserLoading, error }}>

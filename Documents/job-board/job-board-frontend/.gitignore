@@ -22,3 +22,29 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# **1. File Sistem & Konfigurasi Pribadi**
+.DS_Store
+.vscode/
+.ssh/
+Library/
+Movies/
+Music/
+Pictures/
+Public/
+
+# **2. Folder yang Bisa Dihasilkan Ulang**
+node_modules/
+.npm/
+.nvm/
+.mongodb/
+.mysql_history
+
+# **3. File atau Folder dari Proyek Lain**
+../../portfolio-mern/
+../../react-harisenin/
+../../node autentikasi/
+
+# **4. Environment Files**
+.env
+.env.local
+

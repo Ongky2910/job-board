@@ -1,21 +1,10 @@
-import {
-  Route,
-  Routes,
-  Navigate,
-} from "react-router-dom";
-import {
-  lazy,
-  Suspense,
-  createContext,
-  useState,
-  useContext,
-  useEffect,
-} from "react";
+import { Route, Routes, Navigate } from "react-router-dom";
+import { lazy, Suspense, createContext, useState, useContext, useEffect } from "react";
 import { ClipLoader } from "react-spinners";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UserProvider, useUser } from "./context/UserContext";
+import { UserProvider, useUser } from "./context/UserContext"; // Import useUser
 import useJobs from "./hooks/useJobs";
 
 // Lazy-loaded components
@@ -31,7 +20,7 @@ import Register from "./components/Register";
 import Logout from "./components/Logout";
 import Dashboard from "./components/Dashboard";
 
-// Tema Context
+// Theme Context
 const ThemeContext = createContext();
 export const useTheme = () => useContext(ThemeContext);
 
@@ -61,9 +50,9 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-// PrivateRoute untuk halaman yang membutuhkan login
+// ✅ PrivateRoute untuk halaman yang membutuhkan login
 const PrivateRoute = ({ children }) => {
-  const { user } = useUser();
+  const { user } = useUser(); // Pastikan ini sudah di-import
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -71,15 +60,70 @@ const PrivateRoute = ({ children }) => {
   return children;
 };
 
-const App = () => {
-  console.log("🔥 React masih berjalan!");
-
-  useEffect(() => {
-    console.log("✅ App sudah dipasang!");
-  }, []);
-
+// ✅ AppContent yang menggunakan useJobs()
+const AppContent = () => {
   const { jobs, isLoading } = useJobs();
 
+  return (
+    <div className="bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="flex justify-center items-center h-screen bg-white dark:bg-gray-900">
+              <ClipLoader color="blue" size={50} />
+            </div>
+          }
+        >
+          <Navbar />
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <>
+                  <HeroSection />
+                  <JobList jobs={jobs} isLoading={isLoading} />
+                </>
+              }
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/logout" element={<Logout />} />
+
+            {/* Private Route for Dashboard */}
+            <Route
+              path="/dashboard"
+              element={
+                <PrivateRoute>
+                  <ErrorBoundary>
+                    <Suspense fallback={<h1 style={{ color: "red" }}>Loading Dashboard...</h1>}>
+                      <Dashboard />
+                    </Suspense>
+                  </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+
+            {/* Private Route for Saved Jobs */}
+            <Route
+              path="/saved-jobs"
+              element={
+                <PrivateRoute>
+                  <SavedJobs />
+                </PrivateRoute>
+              }
+            />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+        <ToastContainer />
+      </ErrorBoundary>
+    </div>
+  );
+};
+
+// ✅ UserProvider dipanggil di sini agar `useJobs()` bisa mendapatkan user
+const App = () => {
   return (
     <ThemeProvider>
       <UserProvider>
@@ -90,43 +134,7 @@ const App = () => {
             </div>
           }
         >
-          <div className="bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
-            <ErrorBoundary>
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <>
-                      <Navbar />
-                      <HeroSection />
-                      <JobList jobs={jobs} />
-                    </>
-                  }
-                />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/logout" element={<Logout />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <Suspense fallback={<h1 style={{ color: "red" }}>Loading Dashboard...</h1>}>
-                      <Dashboard />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/saved-jobs"
-                  element={
-                    <PrivateRoute>
-                      <SavedJobs />
-                    </PrivateRoute>
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </ErrorBoundary>
-            <ToastContainer />
-          </div>
+          <AppContent />
         </Suspense>
       </UserProvider>
     </ThemeProvider>

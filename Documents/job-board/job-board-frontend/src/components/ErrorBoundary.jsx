@@ -20,7 +20,7 @@ class ErrorBoundary extends Component {
       return (
         <div className="text-center text-red-600 p-4">
           <h2>Something went wrong.</h2>
-          <p>{this.state.error?.message || "An unexpected error occurred"}</p>
+          <pre>{this.state.error?.message}</pre>
         </div>
       );
     }

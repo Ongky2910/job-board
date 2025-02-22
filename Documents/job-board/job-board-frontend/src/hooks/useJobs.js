@@ -1,190 +1,202 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
+import _ from "lodash";
 
 const BASE_URL = "http://localhost:5001/api";
 
-const useJobs = (searchTerm = "", filterType = "All", currentPage = 1) => {
-  const { user, setUser, isUserLoading, logoutUser } = useUser();
+const useJobs = () => {
+  const { user, isUserLoading, logoutUser } = useUser();
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
   const jobsPerPage = 6;
-  const [searchTermState, setSearchTerm] = useState(searchTerm);
-  const [filterTypeState, setFilterType] = useState(filterType);
-  const [currentPageState, setCurrentPage] = useState(currentPage);
 
-  useEffect(() => {
-    if (isUserLoading) return;
-    if (!user || !user.id) {
-      setError("User not authenticated.");
-      setIsLoading(false);
+  const [contractType, setContractType] = useState("All");
+  const [workType, setWorkType] = useState("All");
+  const [filterType, setFilterType] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [jobsAppliedCount, setJobsAppliedCount] = useState(0);
+  const [jobsSavedCount, setJobsSavedCount] = useState(0);
+
+  const debouncedFetchRef = useRef();
+
+  const fetchUserJobCounts = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await axios.get(`${BASE_URL}/auth/dashboard`, { withCredentials: true });
+      console.log("📊 Dashboard data:", response.data);
+      if (response.data?.user) {
+        setJobsAppliedCount(response.data.user.appliedJobs?.length || 0);
+        setJobsSavedCount(response.data.user.savedJobs?.length || 0);
+        console.log("✅ Updated Jobs Applied Count:", response.data.user.appliedJobs?.length || 0);
+        console.log("✅ Updated Jobs Saved Count:", response.data.user.savedJobs?.length || 0);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching user job counts:", error);
+    }
+  };
+
+
+  // ✅ Fungsi untuk menyimpan pekerjaan (Save Job)
+  const handleSaveJob = async (jobId) => {
+    if (!user) {
+      console.warn("⚠️ User not logged in. Cannot save job.");
+      return;
+    }
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/jobs/${jobId}/save`,  
+        {},
+        { withCredentials: true }
+      );
+      console.log("✅ Job saved successfully:", response.data);
+
+      // 🔄 Update state untuk menandai pekerjaan telah disimpan
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.id === jobId ? { ...job, isSaved: true } : job
+        )
+      );
+      console.log("🔍 Updated Saved Jobs:", jobs);
+    } catch (error) {
+      console.error("❌ Error saving job:", error);
+    }
+  };
+
+  // ✅ Fungsi untuk melamar pekerjaan (Apply Job)
+  const handleApplyJob = async (jobId) => {
+    if (!user) {
+      console.warn("⚠️ User not logged in. Cannot apply for job.");
       return;
     }
 
-    const fetchJobs = async () => {
-      setIsLoading(true);
-      setError(null);
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/jobs/${jobId}/apply`,  
+        {},
+        { withCredentials: true }
+      );
+      console.log("✅ Job applied successfully:", response.data);
 
-      // 🔹 Deklarasi awal variabel untuk menghindari ReferenceError
-      let localJobsResponse = { data: { jobs: [], totalPages: 1 } };
-      let externalJobsResponse = { data: [] };
+      // 🔄 Update state untuk menandai pekerjaan telah dilamar
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.id === jobId ? { ...job, isApplied: true } : job
+        )
+      );
+      console.log("🔍 Updated Applied Jobs:", jobs);
+    } catch (error) {
+      console.error("❌ Error applying for job:", error);
+    }
+  };
 
-      try {
-        const params = {
-          user_id: user.id,
-          search: searchTerm.trim(),
-          job_type: filterType === "All" ? "" : filterType,
-          page: currentPage,
-          limit: jobsPerPage,
-        };
+  // ✅ Fungsi untuk mengambil data pekerjaan
+  const fetchJobs = async () => {
+    if (!user?.id || isUserLoading) {
+      console.warn("⏳ Skipping fetch: User not loaded yet.");
+      return;
+    }
 
-        console.log("Fetching jobs with params:", params);
-
-        [localJobsResponse, externalJobsResponse] = await Promise.all([
-          axios.get(`${BASE_URL}/jobs`, {
-            params,
-            withCredentials: true,
-          }),
-          axios.get(`${BASE_URL}/jobs/external-jobs`, {
-            params,
-            withCredentials: true,
-          }),
-        ]);
-
-        console.log("✅ Local Jobs Response:", localJobsResponse.data);
-        console.log("✅ External Jobs Response:", externalJobsResponse.data);
-
-        setJobs([
-          ...(Array.isArray(localJobsResponse.data.jobs) ? localJobsResponse.data.jobs : []),
-          ...(Array.isArray(externalJobsResponse.data) ? externalJobsResponse.data : []),
-        ]);
-
-        setTotalPages(localJobsResponse.data.totalPages || 1);
-      } catch (err) {
-        console.error("❌ Error occurred:", err);
-
-        if (err.response?.status === 401) {
-          console.warn("⚠️ Token expired, logging out...");
-          logoutUser();
-        } else {
-          setError(err.response?.data?.message || "Failed to fetch jobs.");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchJobs();
-  }, [searchTerm, filterTypeState, currentPage, user, isUserLoading]);
-
-  // 🔹 Pastikan `console.log` hanya dijalankan dalam `useEffect`
-  // 🔹 Refresh Jobs
-  const refreshJobs = useCallback(async () => {
-    if (!user || !user.id) return;
+    setIsLoading(true);
+    setError(null);
 
     try {
-      console.log("🔄 Refreshing jobs...");
       const params = {
         user_id: user.id,
-        search: searchTermState.trim(),
-        job_type: filterTypeState === "All" ? "" : filterTypeState,
-        page: currentPageState,
+        search: searchTerm.trim(),
+        job_type: filterType === "All" ? "" : filterType,
+        contract_type: contractType === "All" ? "" : contractType,
+        work_type: workType === "All" ? "" : workType,
+        page: currentPage,
         limit: jobsPerPage,
       };
+
+      console.log("Fetching jobs with params:", params);
 
       const [localJobsResponse, externalJobsResponse] = await Promise.all([
         axios.get(`${BASE_URL}/jobs`, { params, withCredentials: true }),
         axios.get(`${BASE_URL}/jobs/external-jobs`, { params, withCredentials: true }),
       ]);
 
-      setJobs([
+      let allJobs = [
         ...(Array.isArray(localJobsResponse.data.jobs) ? localJobsResponse.data.jobs : []),
         ...(Array.isArray(externalJobsResponse.data) ? externalJobsResponse.data : []),
-      ]);
+      ];
 
+      // 🔍 Filter pekerjaan secara lokal untuk memastikan hasil yang benar
+      if (searchTerm.trim()) {
+        const lowerSearch = searchTerm.trim().toLowerCase();
+        allJobs = allJobs.filter(
+          (job) =>
+            job.title?.toLowerCase().includes(lowerSearch) ||
+            job.company?.display_name?.toLowerCase().includes(lowerSearch) ||
+            job.company_name?.toLowerCase().includes(lowerSearch)
+        );
+      }
+
+      if (workType !== "All") {
+        allJobs = allJobs.filter(
+          (job) => job.work_type?.toLowerCase() === workType.toLowerCase()
+        );
+      }
+
+      // ✅ Cek apakah data berubah sebelum update state
+      setJobs(allJobs);
       setTotalPages(localJobsResponse.data.totalPages || 1);
-      console.log("✅ Jobs refreshed successfully!");
     } catch (err) {
-      console.error("❌ Failed to refresh jobs:", err);
+      console.error("❌ Error occurred:", err);
+      if (err.response?.status === 401) {
+        logoutUser();
+      } else {
+        setError(err.response?.data?.message || "Failed to fetch jobs.");
+      }
+    } finally {
+      setIsLoading(false);
     }
-  }, [user, searchTermState, filterTypeState, currentPageState]);
+  };
 
-  // 🔹 Save Job
-  const handleSaveJob = useCallback(async (jobId) => {
-    if (!user) return alert("Please login to save jobs.");
+  useEffect(() => {
+    debouncedFetchRef.current = _.debounce(fetchJobs, 500);
+  }, []);
 
-    console.log(`🟢 Saving job with ID: ${jobId}`);
-
-    try {
-      const response = await axios.post(
-        `${BASE_URL}/jobs/${jobId}/save`,
-        {},
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
-        }
-      );
-
-      console.log("✅ Response from Save API:", response.data);
-      alert(response.data.message || "Job saved successfully!");
-
-      // ✅ Update User Data
-      setUser((prev) => ({
-        ...prev,
-        jobSaved: (prev.jobSaved || 0) + 1,
-      }));
-    } catch (err) {
-      console.error("❌ Failed to save job:", err.response?.data || err);
-      alert(err.response?.data?.message || "Failed to save job.");
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      debouncedFetchRef.current();
+      fetchUserJobCounts();
     }
-  }, [user, setUser]);
+  }, [searchTerm, user]);
 
-  // 🔹 Apply Job
-  const handleApplyJob = useCallback(async (jobId) => {
-    if (!user) return alert("Please login to apply for jobs.");
-
-    try {
-      const response = await axios.post(
-        `${BASE_URL}/jobs/${jobId}/apply`,
-        {},
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
-        }
-      );
-
-      if (response.status !== 200) throw new Error("Failed to apply job");
-
-      // ✅ Update User Data
-      setUser((prev) => ({
-        ...prev,
-        jobApplied: (prev.jobApplied || 0) + 1,
-      }));
-
-      console.log("✅ Job applied successfully!");
-    } catch (error) {
-      console.error("❌ Error applying for job:", error.response?.data || error.message);
-      alert(error.response?.data?.message || "Failed to apply for job.");
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      fetchJobs();
+      fetchUserJobCounts();
     }
-  }, [user, setUser]);
+  }, [filterType, contractType, workType, currentPage, user, isUserLoading]);
 
   return {
     jobs,
+    setJobs,
     isLoading,
     error,
     totalPages,
-    searchTerm: searchTermState,
-    setSearchTerm,
-    filterType: filterTypeState,
+    filterType,
     setFilterType,
-    currentPage: currentPageState,
+    contractType,
+    setContractType,
+    workType,
+    setWorkType,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
     setCurrentPage,
+    isUserLoading,
     handleSaveJob,
     handleApplyJob,
-    setJobs,
-    refreshJobs,
+    jobsAppliedCount,
+    jobsSavedCount,
   };
 };
 

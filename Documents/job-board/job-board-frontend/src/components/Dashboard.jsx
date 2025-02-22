@@ -5,8 +5,8 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 
 export default function Dashboard() {
-  const { user } = useUser() || { user: null };
-  const { jobs = [], setJobs } = useJobs() || { jobs: [], setJobs: () => {} };
+  const { user } = useUser() ?? { user: null };
+  const { jobs = [], setJobs = () => {} } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,17 +27,12 @@ export default function Dashboard() {
 
         if (userRes.status === "fulfilled" && userRes.value.data) {
           console.log("📌 User Data from API:", userRes.value.data);
+          const userInfo = userRes.value.data.user || {};
           setUserData({
-            name: userRes.value.data.user?.name || "N/A",
-            email: userRes.value.data.user?.email || "N/A",
-            jobApplied:
-              userRes.value.data.user?.jobApplied ??
-              userRes.value.data.user?.appliedJobs?.length ??
-              0,
-            jobSaved:
-              userRes.value.data.user?.jobSaved ??
-              userRes.value.data.user?.savedJobs?.length ??
-              0,
+            name: userInfo.name || "N/A",
+            email: userInfo.email || "N/A",
+            jobApplied: userInfo.appliedJobs ? userInfo.appliedJobs.length : 0,
+            jobSaved: userInfo.savedJobs ? userInfo.savedJobs.length : 0,
           });
         }
 
@@ -98,33 +93,25 @@ export default function Dashboard() {
           <h2 className="text-2xl font-semibold mb-4">Your Jobs</h2>
           {Array.isArray(jobs) && jobs.length > 0 ? (
             <ul className="space-y-4">
-              {jobs.map((job, index) => {
-                if (!job.id && !job._id)
-                  console.warn("⚠️ Job tanpa ID ditemukan:", job);
-                return (
-                  <li
-                    key={job.id || job._id || index}
-                    className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg"
+              {jobs.map((job, index) => (
+                <li
+                  key={job.id || job._id || index}
+                  className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg"
+                >
+                  <h3 className="text-lg font-semibold">{job.title}</h3>
+                  <p>{job.company}</p>
+                  <Link
+                    to={`/jobs/${job.id || job._id}`}
+                    className="text-blue-500"
                   >
-                    <h3 className="text-lg font-semibold">{job.title}</h3>
-                    <p>{job.company}</p>
-                    <Link
-                      to={`/jobs/${job.id || job._id}`}
-                      className="text-blue-500"
-                    >
-                      View Job
-                    </Link>
-                  </li>
-                );
-              })}
+                    View Job
+                  </Link>
+                </li>
+              ))}
             </ul>
           ) : (
             <p>No jobs found.</p>
           )}
-
-          <pre className="text-xs bg-gray-200 dark:bg-gray-800 p-4 rounded-md text-black dark:text-white">
-            {JSON.stringify(jobs, null, 2)}
-          </pre>
         </div>
       </div>
     </div>

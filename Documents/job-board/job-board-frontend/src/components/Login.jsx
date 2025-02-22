@@ -43,7 +43,8 @@ export default function Login() {
   
 
   return (
-    <div className="w-full max-w-md mx-auto mt-16">
+    <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+       <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded shadow-lg">
       <h2 className="text-2xl font-bold text-center">Login</h2>
       {error && <p className="text-red-500 text-center">{error}</p>}
       <form onSubmit={handleSubmit} className="space-y-4 mt-4">
@@ -81,6 +82,7 @@ export default function Login() {
         Don't have an account?{" "}
         <a href="/register" className="text-blue-600">Register</a>
       </p>
+    </div>
     </div>
   );
 }
