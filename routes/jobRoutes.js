@@ -8,6 +8,7 @@ const {
   createJob, 
   updateJob, 
   deleteJob, 
+  restoreJob, 
   applyJob, 
   getAppliedJobs, 
   saveJob, 
@@ -25,40 +26,12 @@ router.use((req, res, next) => {
   next();
 });
 
-// GET /api/jobs - Mendapatkan daftar pekerjaan dengan filter & pagination
-router.get("/", async (req, res) => {
-  const { user_id, location, job_type, search, page, limit } = req.query;
+// Mendapatkan daftar semua pekerjaan (GET /api/jobs)
+router.get("/", protect, getUserJobList);
 
-  // Buat query untuk MongoDB berdasarkan parameter yang diterima
-  const query = {
-    ...(user_id && { postedBy: new mongoose.Types.ObjectId(user_id) }),
-    ...(location && { location }),
-    ...(job_type && { job_type }),
-    ...(search && { 
-      $or: [
-        { title: { $regex: search, $options: 'i' } }, 
-        { description: { $regex: search, $options: 'i' } } 
-      ] 
-    }),
-  };
 
-  // Konversi pagination
-  const pageNumber = parseInt(page) || 1;
-  const pageSize = parseInt(limit) || 6;
-  const skip = (pageNumber - 1) * pageSize;
-
-  console.log("Final Query for MongoDB:", JSON.stringify(query, null, 2));
-  console.log(`Pagination - Skip: ${skip}, Limit: ${pageSize}`);
-
-  try {
-    const jobs = await Job.find(query).skip(skip).limit(pageSize);
-      console.log("Jobs Found:", jobs);
-    res.json(jobs);
-  } catch (error) {
-    console.error("Error fetching jobs:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
+// ✅ Tambahkan route untuk restore job
+router.put("/:id/restore", protect, restoreJob);
 
 // CRUD Job - Hanya pengguna yang login bisa mengelola pekerjaan
 router.route("/:id")

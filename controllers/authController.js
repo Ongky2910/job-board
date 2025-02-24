@@ -25,7 +25,7 @@ const registerUser = async (req, res) => {
 
      // Generate the JWT token
      const token = jwt.sign(
-      { user: { id: newUser.id, email: newUser.email } },
+       { id: newUser.id, email: newUser.email },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -57,36 +57,59 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    // Compare the provided password with the stored hashed password
+    // Bandingkan password yang diinput dengan hashed password di database
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Generate the JWT token
+    // Buat token JWT dengan struktur yang benar
     const token = jwt.sign(
-      { user: { id: user._id, email: user.email } },
+      { id: user._id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: "1h" }
     );
-    
-    // Send the response with token and user data
+
+    // ✅ Simpan token dalam HTTP-Only Cookie
+    res.cookie("token", token, {
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict"
+    });
+
+    // Kirim user data tanpa token di response body
     res.json({
       message: "Login successful",
-      token,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
-        // Add any other user info you want to send
       }
     });
+
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// Logout User
+const logoutUser = async (req, res) => {
+  try {
+    res.cookie("token", "", { // Kosongkan cookie
+      httpOnly: true,
+      expires: new Date(0), // Atur agar langsung expired
+      sameSite: "Strict",
+      secure: process.env.NODE_ENV === "production",
+    });
 
-module.exports = { registerUser, loginUser, };
+    res.json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+module.exports = { registerUser, loginUser, logoutUser };
 

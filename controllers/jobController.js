@@ -6,36 +6,30 @@ console.log("Job Controller Loaded");
 
 // ✅ Mendapatkan daftar pekerjaan yang diposting oleh pengguna
 const getUserJobList = async (req, res) => {
-  console.log('User:', req.user); 
   try {
     const userId = req.user?.id;
     if (!userId) {
       return res.status(400).json({ message: "User ID is missing" });
     }
 
-    console.log("Fetching jobs for user ID:", userId);
-
-    const { location, job_type } = req.query;
+    const { location, job_type, contractType, workType } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
-    // Build the filter criteria, ensuring optional parameters are handled properly
     const filterCriteria = {
-      
       postedBy: userId,
-      ...(location && { location }),  // Only include location if provided
-      ...(job_type && { category: job_type }), // Ensure job_type matches the category field in your schema
+      ...(location && { location }),
+      ...(job_type && { category: job_type }),
+      ...(contractType && { contractType }),
+      ...(workType && { workType }),
     };
 
-    // Fetch jobs with the given filter criteria, using pagination
-    const jobs = await Job.find(filterCriteria)
-      .populate("postedBy", "name email") // Populating user info
-      .skip((page - 1) * limit) // Pagination logic
-      .limit(limit); // Limit results to the specified limit
+    const dbJobs = await Job.find(filterCriteria)
+      .populate("postedBy", "name email")
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-      console.log("Fetched jobs:", jobs);
-    // Return the jobs
-    res.status(200).json(jobs);
+    res.status(200).json(dbJobs);
   } catch (err) {
     console.error("Error retrieving jobs:", err);
     res.status(500).json({ message: "Internal Server Error" });
@@ -43,20 +37,24 @@ const getUserJobList = async (req, res) => {
 };
 
 
-
 // ✅ Membuat pekerjaan baru
 const createJob = async (req, res) => {
   try {
     const { title, company, description } = req.body;
     if (!title || !company || !description) {
-      return res.status(400).json({ message: "Title, company, and description are required" });
+      return res
+        .status(400)
+        .json({ message: "Title, company, and description are required" });
     }
 
     const newJob = new Job({
       title,
       company,
       description,
-      postedBy: req.user.id,
+      location: job.location.display_name,
+      externalId: job.id,
+      postedBy: req.user?.id || null,
+      isExternal: true,
     });
 
     await newJob.save();
@@ -70,21 +68,32 @@ const createJob = async (req, res) => {
 // ✅ Mengupdate pekerjaan
 const updateJob = async (req, res) => {
   try {
-    const { title, company, description } = req.body;
-    if (!title || !company || !description) {
-      return res.status(400).json({ message: "Title, company, and description are required" });
+    const { title, company, description, contractType, workType } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized: Please log in" });
     }
 
-    const updatedJob = await Job.findByIdAndUpdate(
-      req.params.id,
-      { title, company, description },
-      { new: true }
-    );
-
-    if (!updatedJob) {
-      return res.status(404).json({ message: "Job not found" });
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid job ID" });
     }
 
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ message: "Job not found or has been deleted" });
+    }
+
+    if (job.postedBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized: You are not the owner of this job" });
+    }
+
+    if (title) job.title = title;
+    if (company) job.company = company;
+    if (description) job.description = description;
+    if (contractType) job.contractType = contractType;
+    if (workType) job.workType = workType;
+
+    const updatedJob = await job.save();
     res.status(200).json(updatedJob);
   } catch (err) {
     console.error("Error updating job:", err);
@@ -92,52 +101,123 @@ const updateJob = async (req, res) => {
   }
 };
 
-// ✅ Menghapus pekerjaan
+// ✅ Menghapus pekerjaan dengan validasi
 const deleteJob = async (req, res) => {
   try {
-    const deletedJob = await Job.findByIdAndDelete(req.params.id);
-
-    if (!deletedJob) {
-      return res.status(404).json({ message: "Job not found" });
+    // Cek apakah user sudah login
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized: Please log in" });
     }
 
-    res.status(200).json({ message: "Job deleted successfully" });
+    // Validasi ID
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid job ID" });
+    }
+
+    // Cari job
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    // Cek kepemilikan job
+    if (job.postedBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized: You are not the owner of this job" });
+    }
+
+    // Soft delete job
+    job.deleted = true;
+    await job.save();
+
+    res.status(200).json({ message: "Job deleted successfully (soft delete)" });
   } catch (err) {
     console.error("Error deleting job:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// ✅ Melamar pekerjaan
-const applyJob = async (req, res) => {
+const restoreJob = async (req, res) => {
   try {
+    console.log("Restore Job Hit!");
+    console.log("User ID:", req.user?.id);
+    console.log("Job ID:", req.params.id);
+    // Cek apakah user sudah login
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized: Please log in" });
+    }
+
+    // Validasi ID
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid job ID" });
+    }
+
+    // Cari job
     const job = await Job.findById(req.params.id);
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    // Cek kepemilikan job
+    if (job.postedBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized: You are not the owner of this job" });
     }
 
-    if (!job.appliedUsers) {
-      job.appliedUsers = [];
+    // Pastikan job sudah dihapus sebelumnya
+    if (!job.deleted) {
+      return res.status(400).json({ message: "Job is not deleted" });
     }
 
-    if (job.appliedUsers.includes(req.user.id)) {
-      return res.status(400).json({ message: "You have already applied to this job" });
-    }
-
-    job.appliedUsers.push(req.user.id);
+    // Restore job
+    job.deleted = false;
     await job.save();
 
-    res.status(200).json({ message: "Application successful" });
+    res.status(200).json({ message: "Job restored successfully" });
   } catch (err) {
-    console.error("Error applying to job:", err);
+    console.error("Error restoring job:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+
+
+// ✅ Melamar pekerjaan
+const applyJob = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const userId = req.user.id;
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    // Cek apakah user sudah apply sebelumnya
+    if (job.appliedUsers.includes(userId)) {
+      return res.status(400).json({ message: "You have already applied for this job" });
+    }
+
+    // Tambahkan user ke appliedUsers dan naikkan applyCount
+    await Job.findByIdAndUpdate(jobId, {
+      $addToSet: { appliedUsers: userId },
+      $inc: { applyCount: 1 } // ✅ Tambah applyCount
+    });
+
+    res.json({ message: "Job applied successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+
 // ✅ Mendapatkan pekerjaan yang telah dilamar
 const getAppliedJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ appliedUsers: req.user.id }).populate("postedBy", "name email");
+    console.log("Fetching applied jobs for user:", req.user?.id);
+
+    const jobs = await Job.find({ appliedUsers: req.user.id })
+      .populate("postedBy", "name email")
+      .lean();
+
+    console.log("Applied jobs found:", jobs.length);
+
     res.status(200).json(jobs);
   } catch (err) {
     console.error("Error retrieving applied jobs:", err);
@@ -145,36 +225,49 @@ const getAppliedJobs = async (req, res) => {
   }
 };
 
+
 // ✅ Menyimpan pekerjaan ke daftar favorit
 const saveJob = async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id);
+    const { jobId } = req.params;
+    const userId = req.user.id;
+
+    const job = await Job.findById(jobId);
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    if (!job.savedUsers) {
-      job.savedUsers = [];
+    // Jika user sudah menyimpan, hapus dari savedUsers
+    if (job.savedUsers.includes(userId)) {
+      await Job.findByIdAndUpdate(jobId, {
+        $pull: { savedUsers: userId },
+        $inc: { saveCount: -1 } // ✅ Kurangi saveCount
+      });
+      return res.json({ message: "Job unsaved successfully" });
     }
 
-    if (job.savedUsers.includes(req.user.id)) {
-      return res.status(400).json({ message: "You have already saved this job" });
-    }
+    // Jika belum, tambahkan user ke savedUsers
+    await Job.findByIdAndUpdate(jobId, {
+      $addToSet: { savedUsers: userId },
+      $inc: { saveCount: 1 } // ✅ Tambah saveCount
+    });
 
-    job.savedUsers.push(req.user.id);
-    await job.save();
-
-    res.status(200).json({ message: "Job saved successfully" });
-  } catch (err) {
-    console.error("Error saving job:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.json({ message: "Job saved successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
 
 // ✅ Mendapatkan daftar pekerjaan yang disimpan
 const getSavedJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ savedUsers: req.user.id }).populate("postedBy", "name email");
+    const jobs = await Job.find({ savedUsers: req.user.id }).populate(
+      "postedBy",
+      "name email"
+    );
     res.status(200).json(jobs);
   } catch (err) {
     console.error("Error retrieving saved jobs:", err);
@@ -182,31 +275,103 @@ const getSavedJobs = async (req, res) => {
   }
 };
 
+async function fetchJobsWithRetry(url, retries = 5, delay = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.get(url);
+      return response.data;
+    } catch (error) {
+      if (error.response && (error.response.status === 429 || error.response.status === 503)) {
+        console.warn(`Rate limit hit! Retrying in ${delay / 1000} seconds...`);
+        await new Promise((res) => setTimeout(res, delay));
+        delay *= 2; // Exponential Backoff: Delay naik 2x setiap retry
+      } else {
+        throw error; // Lempar error jika bukan 429 atau 503
+      }
+    }
+  }
+  throw new Error("Failed to fetch jobs from Adzuna after multiple attempts.");
+}
+
 // ✅ Mengambil daftar pekerjaan dari API eksternal
 const getExternalJobListings = async (req, res) => {
-  try {
-    const { location, job_type, app_id, app_key } = req.query;
-    const response = await axios.get("https://api.adzuna.com/v1/api/jobs/us/search/1", {
-      params: {
-        location: location || "remote",
-        job_type: job_type || "fulltime",
-        app_id: app_id || "your_app_id",
-        app_key: app_key || "your_app_key",
-      },
-    });
+  console.log("External jobs route hit!");
 
-    res.json(response.data);
+  try {
+    const location = req.query.where || "New York";  
+    const keyword = req.query.what ? `&what=${encodeURIComponent(req.query.what)}` : "";
+    const contractTypeFilter = req.query.contractType;
+    const workTypeFilter = req.query.workType;
+
+    const app_id = process.env.ADZUNA_APP_ID;
+    const app_key = process.env.ADZUNA_APP_KEY;
+    const country = process.env.ADZUNA_COUNTRY || "us"; 
+
+    if (!app_id || !app_key) {
+      return res.status(500).json({ message: "Missing API credentials" });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const apiUrl = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${app_id}&app_key=${app_key}&where=${encodeURIComponent(location)}${keyword}`;
+
+    console.log("Fetching data from:", apiUrl);
+
+    const jobData = await fetchJobsWithRetry(apiUrl);
+    const externalJobs = jobData.results;
+
+    let savedJobs = await Promise.all(
+      externalJobs.map(async (job) => {
+        let existingJob = await Job.findOne({ externalId: job.id });
+
+        if (!existingJob) {
+          let workType = "Onsite"; // Default
+
+          if (job.category?.label.toLowerCase().includes("remote")) {
+            workType = "Remote";
+          } else if (job.category?.label.toLowerCase().includes("hybrid")) {
+            workType = "Hybrid";
+          }
+
+          existingJob = new Job({
+            title: job.title,
+            company: job.company?.display_name || "Unknown Company",
+            description: job.description || "No description available.",
+            location: job.location?.display_name || "Unknown Location",
+            contractType: job.contract_time 
+            ? job.contract_time.replace("_", "-").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) 
+            : "Full-Time",
+            workType, 
+            externalId: job.id,
+          });
+
+          await existingJob.save();
+        }
+        return existingJob;
+      })
+    );
+
+    if (contractTypeFilter) {
+      savedJobs = savedJobs.filter(job => job.contractType === contractTypeFilter);
+    }
+
+    if (workTypeFilter) {
+      savedJobs = savedJobs.filter(job => job.workType === workTypeFilter);
+    }
+
+    res.json(savedJobs);
   } catch (error) {
-    console.error("Error fetching jobs from external API:", error.message);
-    res.status(500).json({ message: "Error fetching external job listings" });
+    console.error("Error fetching and saving jobs:", error);
+    res.status(500).json({ message: "Error fetching jobs", error: error.message });
   }
 };
+
 
 module.exports = {
   getUserJobList,
   createJob,
   updateJob,
   deleteJob,
+  restoreJob, 
   applyJob,
   getAppliedJobs,
   saveJob,

@@ -1,54 +1,26 @@
 const mongoose = require("mongoose");
 
 const jobSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-  },
-  company: {
-    type: String,
-    required: true,
-  },
-  description: {
-    type: String,
-    required: true,
-  },
+  title: { type: String, required: true },
+  company: { type: String, required: true },
+  description: { type: String },
+  location: { type: String, required: true },
+  externalId: { type: String, unique: true, sparse: true }, 
+  contractType: { type: String, enum: ["Full-Time", "Part-Time", "Contract", "Internship", "Temporary"], default: "Full-Time" },
+  workType: { type: String, enum: ["Onsite", "Hybrid", "Remote"], default: "Onsite" },
   postedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",  
-    required: true,
+    ref: "User",
+    required: function () {
+      return !this.externalId; 
+    },
   },
-  datePosted: {
-    type: Date,
-    default: Date.now,
-  },
-  appliedUsers: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", 
-      default: [],
-    }
-  ],
-  savedUsers: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",  
-      default: [],
-    }
-  ],
-  salaryRange: { 
-    min: { type: Number },
-    max: { type: Number }
-  },
-  category: { 
-    type: String, 
-  },
-  location: { 
-    type: String, // Menambahkan field location
-    required: false, // Tidak wajib jika lokasi tidak tersedia
-  },
+  appliedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], 
+  savedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],   
+  saveCount: { type: Number, default: 0 },  
+  applyCount: { type: Number, default: 0 }, 
+  deleted: { type: Boolean, default: false },                               
 });
 
 const Job = mongoose.model("Job", jobSchema);
-
 module.exports = Job;

@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/authRoutes");
+const cookieParser = require("cookie-parser"); 
 const protectedRoute = require("./routes/protectedRoute");
 const jobRoutes = require("./routes/jobRoutes");
 
@@ -12,11 +13,13 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: "http://localhost:5173",  // Mengizinkan akses dari frontend
-  methods: "GET,POST,PUT,DELETE",  // Metode HTTP yang diizinkan
+  origin: "http://localhost:5173",  
+  methods: "GET,POST,PUT,DELETE",
+  credentials: true 
 }));
 
-app.use(express.json()); // Untuk parsing body request dalam format JSON
+app.use(express.json()); 
+app.use(cookieParser()); 
 
 // Rute dasar
 app.get("/", (req, res) => {
@@ -31,15 +34,19 @@ app.use("/api/auth", authRoutes);
 app.use("/api", protectedRoute);
 
 // Koneksi ke MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((error) => {
-    console.error("MongoDB connection error: ", error);
-    process.exit(1); // Keluar jika koneksi gagal
-  });
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("✅ Connected to MongoDB Atlas"))
+.catch((error) => {
+  console.error("❌ MongoDB connection error: ", error);
+  process.exit(1);
+});
 
 // Memulai server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+

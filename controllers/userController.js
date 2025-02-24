@@ -9,17 +9,18 @@ const getUserDashboard = async (req, res) => {
     console.log("User ID:", userId);  
 
     // Cari data user berdasarkan ID
-    const user = await User.findById(userId);
-
+    const user = await User.findById(userId).populate("savedJobs"); 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      console.log("User not found");
+    } else {
+      console.log("User found:", user);
     }
 
     // Ambil jumlah pekerjaan yang sudah diterapkan oleh user
-    const appliedJobs = await Job.find({ postedBy: userId }).countDocuments();
-
+    const appliedJobs = await Job.find({ appliedBy: userId }).countDocuments();
+    console.log("Applied Jobs Count:", appliedJobs);
     // Ambil jumlah pekerjaan yang disimpan (jika ada fitur bookmark)
-    const savedJobs = user.savedJobs || [];  // Misal: `savedJobs` adalah array ID pekerjaan yang disimpan
+    const savedJobs = user.savedJobs || [];  
 
     return res.status(200).json({
       user: {
@@ -27,6 +28,8 @@ const getUserDashboard = async (req, res) => {
         email: user.email,
         jobApplied: appliedJobs,
         jobSaved: savedJobs.length,
+        appliedJobs: appliedJobs,
+        savedJobs: savedJobs,
       },
     });
   } catch (error) {
