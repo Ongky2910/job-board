@@ -18,13 +18,7 @@ const allowedOrigins = [
 
 // Middleware
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: ["https://job-board-p17m7qhy1-ongky-ongs-projects.vercel.app"], 
   methods: "GET,POST,PUT,DELETE",
   credentials: true
 }));
