@@ -10,6 +10,8 @@ export default function Dashboard() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const API_URL = import.meta.env.VITE_BACKEND_URL;
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -17,10 +19,10 @@ export default function Dashboard() {
       setLoading(true);
       try {
         const [userRes, jobsRes] = await Promise.allSettled([
-          axios.get("http://localhost:5001/api/auth/dashboard", {
+          axios.get(`${API_URL}/api/auth/dashboard`, {
             withCredentials: true,
           }),
-          axios.get("http://localhost:5001/api/jobs", {
+          axios.get(`${API_URL}/api/jobs`, {
             withCredentials: true,
           }),
         ]);
@@ -41,7 +43,7 @@ export default function Dashboard() {
           Array.isArray(jobsRes.value.data)
         ) {
           console.log("✅ Jobs from API:", jobsRes.value.data);
-          setJobs([...jobsRes.value.data]); 
+          setJobs([...jobsRes.value.data]);
         }
       } catch (error) {
         console.error("❌ Error fetching data:", error);

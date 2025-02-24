@@ -17,12 +17,14 @@ export const UserProvider = ({ children }) => {
     checkAuth(); // Mengecek login saat pertama kali app dijalankan
   }, []);
 
+  const API_URL = import.meta.env.VITE_BACKEND_URL; 
+
   // ✅ Fungsi Login User
   const loginUser = async (email, password) => {
     try {
       console.log("🟢 Sending login request...", email, password);
       const response = await axios.post(
-        "http://localhost:5001/api/auth/login",
+        `${API_URL}/auth/login`,
         { email, password },
         { withCredentials: true } // Harusnya token tersimpan di cookie
       );
@@ -56,7 +58,7 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🚪 Logging out user...");
       await axios.post(
-        "http://localhost:5001/api/auth/logout",
+       `${API_URL}/auth/logout`,
         {},
         { withCredentials: true } // Pastikan cookie dihapus
       );
@@ -73,7 +75,7 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🔍 Checking user authentication...");
       const response = await axios.get(
-        "http://localhost:5001/api/auth/verify-token",
+       `${API_URL}/auth/verify-token`,
         { withCredentials: true }
       );
       console.log("✅ Authenticated User:", response.data.user);

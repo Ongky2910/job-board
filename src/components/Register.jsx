@@ -33,7 +33,7 @@ export default function Register() {
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5001";
+      const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
       const { data } = await axios.post(
         `${apiUrl}/api/auth/register`,
         formData

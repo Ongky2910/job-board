@@ -3,7 +3,7 @@ import axios from "axios";
 import { useUser } from "../context/UserContext";
 import _ from "lodash";
 
-const BASE_URL = "http://localhost:5001/api";
+const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001/api";
 
 const useJobs = () => {
   const { user, isUserLoading, logoutUser } = useUser();

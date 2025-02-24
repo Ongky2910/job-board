@@ -13,18 +13,19 @@ export const UserProvider = ({ children }) => {
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+
   useEffect(() => {
-    checkAuth(); // Mengecek login saat pertama kali app dijalankan
+    checkAuth();
   }, []);
 
   // ✅ Fungsi Login User
   const loginUser = async (email, password) => {
     try {
       console.log("🟢 Sending login request...", email, password);
-      const response = await axios.post(
-        "http://localhost:5001/api/auth/login",
+      const response = await axios.post(`${API_URL}/api/auth/login`,
         { email, password },
-        { withCredentials: true } // Harusnya token tersimpan di cookie
+        { withCredentials: true } 
       );
   
       console.log("✅ Login Response:", response.data);
@@ -56,9 +57,9 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🚪 Logging out user...");
       await axios.post(
-        "http://localhost:5001/api/auth/logout",
+        `${API_URL}/api/auth/logout`,
         {},
-        { withCredentials: true } // Pastikan cookie dihapus
+        { withCredentials: true } 
       );
       setUser(null); // Reset user state
       console.log("✅ User logged out successfully!");
@@ -73,7 +74,7 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🔍 Checking user authentication...");
       const response = await axios.get(
-        "http://localhost:5001/api/auth/verify-token",
+        `${API_URL}/api/auth/verify-token`,
         { withCredentials: true }
       );
       console.log("✅ Authenticated User:", response.data.user);
