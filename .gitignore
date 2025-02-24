@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# **1. File Sistem & Konfigurasi Pribadi**
+.DS_Store
+.vscode/
+.ssh/
+Library/
+Movies/
+Music/
+Pictures/
+Public/
+
+# **2. Folder yang Bisa Dihasilkan Ulang**
+node_modules/
+.npm/
+.nvm/
+.mongodb/
+.mysql_history
+
+# **3. File atau Folder dari Proyek Lain**
+../../portfolio-mern/
+../../react-harisenin/
+../../node autentikasi/
+
+# **4. Environment Files**
+.env
+.env.local
+
