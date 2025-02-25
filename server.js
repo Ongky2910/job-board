@@ -13,15 +13,16 @@ const app = express();
 
 const allowedOrigins = [
   "https://job-board-eight-peach.vercel.app", 
-  "http://localhost:5173",
+  "https://job-board-p17m7qhy1-ongky-ongs-projects.vercel.app", 
+  "http://localhost:5173"
 ];
 
-// Middleware
 app.use(cors({
-  origin: ["https://job-board-p17m7qhy1-ongky-ongs-projects.vercel.app"], 
+  origin: allowedOrigins, 
   methods: "GET,POST,PUT,DELETE",
   credentials: true
 }));
+
 
 app.use(express.json()); 
 app.use(cookieParser()); 
