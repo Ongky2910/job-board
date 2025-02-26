@@ -73,10 +73,11 @@ const loginUser = async (req, res) => {
 
     // ✅ Simpan token dalam HTTP-Only Cookie
     res.cookie("token", token, {
-      httpOnly: true, 
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict"
+      sameSite: "None", 
     });
+    
 
     // Kirim user data tanpa token di response body
     res.json({
