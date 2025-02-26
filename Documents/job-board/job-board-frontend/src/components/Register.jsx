@@ -86,6 +86,7 @@ export default function Register() {
             value={formData.password}
             onChange={handleChange}
             className="w-full p-3 border border-gray-300 rounded"
+            autoComplete="new-password"
           />
           <button 
             type="submit" 

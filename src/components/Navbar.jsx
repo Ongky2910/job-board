@@ -2,143 +2,186 @@ import { useState, useEffect } from "react";
 import { Menu, X, Briefcase } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../App";
-import { FiSun, FiMoon } from "react-icons/fi";
+import { FiSun, FiMoon, FiLogOut } from "react-icons/fi";
 import { useUser } from "../context/UserContext";
+import axios from "axios";
+import { motion } from "framer-motion";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, setUser, logoutUser } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const [isLoading, setIsLoading] = useState(true);
+  const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
-
-    if (storedUser) {
+    const fetchUser = async () => {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        console.log("User loaded from localStorage:", parsedUser);
-        setUser(parsedUser);
+        const response = await axios.get(`${API_URL}/api/auth/dashboard`, {
+          withCredentials: true,
+        });
+        setUser(response.data.user);
       } catch (error) {
-        console.error("Error parsing user data:", error);
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        setUser(null);
+        console.error("Error fetching user:", error);
+        logoutUser();
       }
-    } else {
-      console.log("No user found in localStorage");
-      setUser(null);
+    };
+
+    if (!user) {
+      fetchUser();
     }
-    setIsLoading(false);
-  }, [setUser]);
+  }, [user, setUser, logoutUser, API_URL]);
 
   return (
     <nav className="bg-blue-600 dark:bg-blue-950 text-white p-4 sticky top-0 z-10 shadow-lg transition-all duration-300 font-roboto">
       <div className="container mx-auto flex justify-between items-center">
-        {/* Logo */}
-        <Link to="/" className="flex items-center text-2xl font-bold">
-          <Briefcase size={25} className="mx-2" />
-          Job Board
+        {/* Logo Job Board */}
+        <Link to="/" className="flex items-center space-x-2 text-2xl font-bold">
+          <Briefcase size={28} />
+          <span>Job Board</span>
         </Link>
 
-        {/* Navbar links */}
+        {/* Menu untuk device besar */}
         <div className="hidden md:flex space-x-8 items-center">
-          <Link to="/" className="hover:text-blue-300 font-bold">
-            Home
-          </Link>
-          <Link to="/jobs" className="hover:text-blue-300 font-bold">
-            Jobs
-          </Link>
-          <Link to="/saved-jobs" className="hover:text-blue-300 font-bold">
-            Saved Jobs
-          </Link>
-          <Link to="/contact" className="hover:text-blue-300 font-bold">
-            Contact
-          </Link>
-          {user && (
+          {user ? (
             <>
               <Link to="/dashboard" className="hover:text-blue-300 font-bold">
                 Dashboard
               </Link>
-              <Link to="/edit-profile" className="hover:text-blue-300 font-bold">
+              <Link
+                to="/edit-profile"
+                className="hover:text-blue-300 font-bold"
+              >
                 Edit Profile
               </Link>
-              <button onClick={logoutUser} className="hover:text-red-400 font-bold">
-                Logout
-              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/" className="hover:text-blue-300 font-bold">
+                Home
+              </Link>
+              <Link to="/jobs" className="hover:text-blue-300 font-bold">
+                Jobs
+              </Link>
+              <Link to="/saved-jobs" className="hover:text-blue-300 font-bold">
+                Saved Jobs
+              </Link>
+              <Link to="/contact" className="hover:text-blue-300 font-bold">
+                Contact
+              </Link>
             </>
           )}
         </div>
 
-        {/* Mobile & Dark Mode Toggle */}
-        <div className="flex items-center gap-x-2 md:gap-x-4">
+        {/* Logout & Dark Mode di Desktop */}
+        <div className="hidden md:flex items-center space-x-4">
           <button
             onClick={toggleDarkMode}
-            className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 p-2 rounded-full transition-all duration-300 mr-2"
+            className="inline-flex items-center justify-center bg-transparent dark:bg-transparent p-0 transition transform hover:scale-110"
           >
             {isDarkMode ? (
-              <FiMoon size={22} className="text-gray-400" />
+              <FiMoon size={24} className="text-gray-400" />
             ) : (
-              <FiSun size={22} className="text-yellow-300" />
+              <FiSun size={24} className="text-yellow-300" />
             )}
           </button>
 
+          {user && (
+            <button
+              onClick={logoutUser}
+              className="inline-flex items-center justify-center bg-transparent dark:bg-transparent p-0 transition transform hover:scale-110"
+              title="Logout"
+            >
+              <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
+            </button>
+          )}
+        </div>
+
+        {/* Menu Hamburger (Mobile) */}
+        <div className="flex md:hidden items-center space-x-3">
+        <button
+  onClick={toggleDarkMode}
+  className="inline-flex items-center justify-center bg-transparent dark:bg-transparent p-0 transition transform hover:scale-110"
+>
+  {isDarkMode ? <FiMoon size={24} className="text-gray-400" /> : <FiSun size={24} className="text-yellow-300" />}
+</button>
+
+          {/* Logout Button */}
+          {user && (
+  <button
+    onClick={logoutUser}
+    className="inline-flex items-center justify-center transition bg-transparent dark:bg-transparent transform hover:scale-110"
+    title="Logout"
+  >
+    <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
+  </button>
+)}
+          {/* Hamburger Button */}
           <button
-            className="md:hidden p-2 bg-transparent dark:bg-transparent text-gray-900 dark:text-white"
             onClick={() => setIsOpen(!isOpen)}
+            className="inline-flex transition transform hover:scale-110 dark:text-gray-300 bg-transparent dark:bg-transparent"
           >
-            {isOpen ? <X size={26} /> : <Menu size={26} />}
+            {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Dropdown Mobile Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 w-full bg-blue-700 p-4 md:hidden shadow-lg transition-all duration-300">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="md:hidden bg-blue-700 dark:bg-blue-900 text-white p-4 mt-2 rounded-lg shadow-lg"
+        >
           <ul className="flex flex-col space-y-4">
-            <li>
-              <Link to="/" className="hover:text-white block" onClick={() => setIsOpen(false)}>
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link to="/jobs" className="hover:text-white block" onClick={() => setIsOpen(false)}>
-                Jobs
-              </Link>
-            </li>
-            <li>
-              <Link to="/saved-jobs" className="hover:text-white block" onClick={() => setIsOpen(false)}>
-                Saved Jobs
-              </Link>
-            </li>
-            <li>
-              <Link to="/contact" className="hover:text-white block" onClick={() => setIsOpen(false)}>
-                Contact
-              </Link>
-            </li>
+            {["Home", "Jobs", "Saved Jobs", "Contact"].map((item, index) => (
+              <motion.li
+                key={item.toLowerCase()}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link
+                  to={`/${item.toLowerCase().replace(" ", "-")}`}
+                  className="hover:text-blue-300 font-bold"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item}
+                </Link>
+              </motion.li>
+            ))}
+
             {user && (
               <>
-                <li>
-                  <Link to="/dashboard" className="hover:text-white block" onClick={() => setIsOpen(false)}>
+                <motion.li
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link
+                    to="/dashboard"
+                    className="hover:text-blue-300 font-bold"
+                    onClick={() => setIsOpen(false)}
+                  >
                     Dashboard
                   </Link>
-                </li>
-                <li>
-                  <Link to="/edit-profile" className="hover:text-white block" onClick={() => setIsOpen(false)}>
+                </motion.li>
+                <motion.li
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link
+                    to="/edit-profile"
+                    className="hover:text-blue-300 font-bold"
+                    onClick={() => setIsOpen(false)}
+                  >
                     Edit Profile
                   </Link>
-                </li>
-                <li>
-                  <button onClick={logoutUser} className="text-red-600 block">
-                    Logout
-                  </button>
-                </li>
+                </motion.li>
               </>
             )}
           </ul>
-        </div>
+        </motion.div>
       )}
     </nav>
   );

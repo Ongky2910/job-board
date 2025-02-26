@@ -32,25 +32,35 @@ export default function Login() {
       toast.success(" Login successful!", { autoClose: 1500 });
       navigate("/");
     } catch (error) {
-      setError(error.response?.data?.message || "Email or Password is incorrect. Please try again.");
+      console.error("❌ Login Error:", error.response?.data || error.message);
+
+      const errorMessage =
+        error.response?.data?.message || "Email or password is incorrect.";
+
+      setError(errorMessage);
+      toast.error(`❌ ${errorMessage}`, { autoClose: 2000 });
     } finally {
       setLoading(false);
     }
   };
-
+  
   const handleForgotPassword = () => {
     if (!formData.email) {
       toast.warning("Please enter your email first!", { autoClose: 2000 });
       return;
     }
     // 🔹 TODO: Implementasi API reset password
-    toast.info("📩 Reset password link has been sent to your email!", { autoClose: 2500 });
+    toast.info("📩 Reset password link has been sent to your email!", {
+      autoClose: 2500,
+    });
   };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700">
-        <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">Login</h2>
+        <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
+          Login
+        </h2>
         {error && <p className="text-red-500 text-center mt-2">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div>
@@ -93,10 +103,13 @@ export default function Login() {
           </div>
         </form>
 
-         <div className="mt-4 flex justify-between items-center text-sm text-gray-700 dark:text-gray-300">
+        <div className="mt-4 flex justify-between items-center text-sm text-gray-700 dark:text-gray-300">
           <span>
             Don't have an account?{" "}
-            <a href="/register" className="text-blue-600 hover:underline inline-block">
+            <a
+              href="/register"
+              className="text-blue-600 hover:underline inline-block"
+            >
               Register
             </a>
           </span>

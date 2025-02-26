@@ -31,9 +31,9 @@ export const UserProvider = ({ children }) => {
   
       console.log("✅ Login Response:", response.data);
   
-      if (response.data.user) {
-        console.log("✅ Login Successful:", response.data);
+      if (response.data.user) {  
         setUser(response.data.user);
+        console.log("✅ Login Successful:", response.data);
   
         // Cek apakah ada token
         console.log("🔑 Token dari response:", response.data.token);
@@ -43,12 +43,15 @@ export const UserProvider = ({ children }) => {
   
         navigate("/dashboard");
       } else {
-        console.error("❌ Response tidak valid:", response.data);
+        console.error("❌ Invalid response from server:", response.data);
         setError("Invalid response from server");
+        throw new Error("Invalid response from server");
       }
     } catch (error) {
-      console.error("❌ Login Error:", error.response?.data || error.message);
-      setError(error.response?.data?.message || "Login failed, please try again.");
+      const errorMessage = error.response?.data?.message || "Login failed, please try again.";
+
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
   
@@ -58,7 +61,7 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🚪 Logging out user...");
       await axios.post(
-       `${API_URL}/auth/logout`,
+       `${API_URL}/api/auth/logout`,
         {},
         { withCredentials: true } 
       );
