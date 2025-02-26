@@ -7,7 +7,7 @@ export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { loginUser } = useUser(); // ✅ Perbaikan: Tidak ada karakter `/`
+  const { loginUser } = useUser();
   const navigate = useNavigate();
 
   console.log("✅ useUser() return value:", loginUser);

@@ -10,6 +10,8 @@ export default function Dashboard() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -17,10 +19,10 @@ export default function Dashboard() {
       setLoading(true);
       try {
         const [userRes, jobsRes] = await Promise.allSettled([
-          axios.get("http://localhost:5001/api/auth/dashboard", {
+            axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
             withCredentials: true,
           }),
-          axios.get("http://localhost:5001/api/jobs", {
+          axios.get(`${API_BASE_URL}/api/jobs`, {
             withCredentials: true,
           }),
         ]);

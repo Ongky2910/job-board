@@ -26,7 +26,7 @@ export const UserProvider = ({ children }) => {
       const response = await axios.post(
         `${API_URL}/auth/login`,
         { email, password },
-        { withCredentials: true } // Harusnya token tersimpan di cookie
+        { withCredentials: true } 
       );
   
       console.log("✅ Login Response:", response.data);
@@ -60,11 +60,11 @@ export const UserProvider = ({ children }) => {
       await axios.post(
        `${API_URL}/auth/logout`,
         {},
-        { withCredentials: true } // Pastikan cookie dihapus
+        { withCredentials: true } 
       );
       setUser(null); // Reset user state
       console.log("✅ User logged out successfully!");
-      navigate("/login"); // Redirect ke halaman login
+      navigate("/login");
     } catch (error) {
       console.error("❌ Logout failed:", error.response?.data || error.message);
     }
@@ -75,7 +75,7 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🔍 Checking user authentication...");
       const response = await axios.get(
-       `${API_URL}/auth/verify-token`,
+       `${API_URL}/api/auth/verify-token`,
         { withCredentials: true }
       );
       console.log("✅ Authenticated User:", response.data.user);
