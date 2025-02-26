@@ -26,7 +26,7 @@ const useJobs = () => {
   const fetchUserJobCounts = async () => {
     if (!user?.id) return;
     try {
-      const response = await axios.get(`${BASE_URL}/auth/dashboard`, { withCredentials: true });
+      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, { withCredentials: true });
       console.log("📊 Dashboard data:", response.data);
       if (response.data?.user) {
         setJobsAppliedCount(response.data.user.appliedJobs?.length || 0);
@@ -117,8 +117,8 @@ const useJobs = () => {
       console.log("Fetching jobs with params:", params);
 
       const [localJobsResponse, externalJobsResponse] = await Promise.all([
-        axios.get(`${BASE_URL}/jobs`, { params, withCredentials: true }),
-        axios.get(`${BASE_URL}/jobs/external-jobs`, { params, withCredentials: true }),
+        axios.get(`${BASE_URL}/api/jobs`, { params, withCredentials: true }),
+        axios.get(`${BASE_URL}/api/jobs/external-jobs`, { params, withCredentials: true }),
       ]);
 
       let allJobs = [
