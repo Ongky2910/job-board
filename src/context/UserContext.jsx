@@ -24,7 +24,7 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🟢 Sending login request...", email, password);
       const response = await axios.post(
-        `${API_URL}/auth/login`,
+        `${API_URL}/api/auth/login`,
         { email, password },
         { withCredentials: true } 
       );
