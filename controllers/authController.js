@@ -1,13 +1,12 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User"); 
-
+const User = require("../models/User");
 
 // Register User
 // Register User
 const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
-  
+
   console.log("Received data:", req.body);
   console.log("Received password:", password);
   console.log("Type of password:", typeof password);
@@ -22,10 +21,10 @@ const registerUser = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
-
+    
     // Hash password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
     console.log("Hashed password:", hashedPassword);
 
     // Create new user
@@ -36,7 +35,7 @@ const registerUser = async (req, res) => {
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: "1h" }
     );
 
     res.status(201).json({
@@ -46,15 +45,13 @@ const registerUser = async (req, res) => {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
-      }
+      },
     });
   } catch (error) {
     console.error("Error during registration:", error);
     res.status(500).json({ message: "Server error", error: error.message });
-  }  
+  }
 };
-
-
 
 // Login User
 const loginUser = async (req, res) => {
@@ -84,9 +81,8 @@ const loginUser = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "None", 
+      sameSite: "None",
     });
-    
 
     // Kirim user data tanpa token di response body
     res.json({
@@ -94,9 +90,8 @@ const loginUser = async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
-      }
+      },
     });
-
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ message: "Server error" });
@@ -106,7 +101,8 @@ const loginUser = async (req, res) => {
 // Logout User
 const logoutUser = async (req, res) => {
   try {
-    res.cookie("token", "", { // Kosongkan cookie
+    res.cookie("token", "", {
+      // Kosongkan cookie
       httpOnly: true,
       expires: new Date(0), // Atur agar langsung expired
       sameSite: "Strict",
@@ -120,6 +116,4 @@ const logoutUser = async (req, res) => {
   }
 };
 
-
 module.exports = { registerUser, loginUser, logoutUser };
-
