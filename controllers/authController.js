@@ -4,12 +4,19 @@ const User = require("../models/User");
 
 
 // Register User
+// Register User
 const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
   
-  console.log("Received data:", req.body); 
+  console.log("Received data:", req.body);
+  console.log("Received password:", password);
+  console.log("Type of password:", typeof password);
 
   try {
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ message: "Invalid password format" });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
@@ -17,20 +24,21 @@ const registerUser = async (req, res) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    console.log("Hashed password:", hashedPassword);
 
-    // Create new userx
+    // Create new user
     const newUser = new User({ name, email, password: hashedPassword });
     await newUser.save();
 
-     // Generate the JWT token
-     const token = jwt.sign(
-       { id: newUser.id, email: newUser.email },
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
-    
-   // Send the response with token and user data
+
     res.status(201).json({
       message: "User registered successfully",
       token,
@@ -45,6 +53,7 @@ const registerUser = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }  
 };
+
 
 
 // Login User

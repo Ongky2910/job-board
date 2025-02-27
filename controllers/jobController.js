@@ -1,8 +1,7 @@
 const axios = require("axios");
 const Job = require("../models/Job");
 
-// ✅ Middleware autentikasi HARUS sudah diterapkan sebelum fungsi ini dipanggil
-console.log("Job Controller Loaded");
+
 
 // ✅ Mendapatkan daftar pekerjaan yang diposting oleh pengguna
 const getUserJobList = async (req, res) => {
@@ -195,7 +194,7 @@ const applyJob = async (req, res) => {
     // Tambahkan user ke appliedUsers dan naikkan applyCount
     await Job.findByIdAndUpdate(jobId, {
       $addToSet: { appliedUsers: userId },
-      $inc: { applyCount: 1 } // ✅ Tambah applyCount
+      $inc: { applyCount: 1 } 
     });
 
     res.json({ message: "Job applied successfully" });
@@ -249,7 +248,7 @@ const saveJob = async (req, res) => {
     // Jika belum, tambahkan user ke savedUsers
     await Job.findByIdAndUpdate(jobId, {
       $addToSet: { savedUsers: userId },
-      $inc: { saveCount: 1 } // ✅ Tambah saveCount
+      $inc: { saveCount: 1 }
     });
 
     res.json({ message: "Job saved successfully" });
