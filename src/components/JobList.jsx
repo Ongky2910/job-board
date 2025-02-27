@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import useJobs from "../hooks/useJobs";
 import { useEffect } from "react";
-
+import { ToastContainer } from "react-toastify";
 
 const JobList = () => {
   const {
@@ -57,14 +57,16 @@ const JobList = () => {
           {isLoading ? (
             <div className="text-center col-span-full">Loading jobs...</div>
           ) : error ? (
-            <div className="text-red-500 text-center col-span-full">{error}</div>
+            <div className="text-red-500 text-center col-span-full">
+              {error}
+            </div>
           ) : jobs && jobs.length > 0 ? (
             jobs.map((job, index) => {
               console.log("Job Data:", job);
 
               return (
                 <motion.div
-                  key={job._id || job.id || index} 
+                  key={job._id || job.id || index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -74,32 +76,47 @@ const JobList = () => {
                     {job.title || "No title available"}
                   </h3>
                   <p className="text-gray-700">
-                  {job.company || "Company not specified"}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {job.location || "Location not provided"} • {job.contractType || "Unknown"}
-                </p>
+                    {job.company || "Company not specified"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {job.location || "Location not provided"} •{" "}
+                    {job.contractType || "Unknown"}
+                  </p>
+                  <ToastContainer position="top-right" autoClose={3000} />
 
                   {/* 🔹 Apply & Save Buttons */}
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleApplyJob(job._id || job.id)}
-                      className="bg-green-600 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-green-700 transition"
+                      className={`px-4 py-2 rounded text-sm font-semibold transition ${
+                        job.isApplied
+                          ? "bg-gray-500 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700 text-white"
+                      }`}
+                      disabled={job.isApplied}
                     >
-                      Apply
+                      {job.isApplied ? "Applied ✅" : "Apply"}
                     </button>
+
                     <button
                       onClick={() => handleSaveJob(job._id || job.id)}
-                      className="bg-yellow-500 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-yellow-600 transition"
+                      className={`px-4 py-2 rounded text-sm font-semibold transition ${
+                        job.isSaved
+                          ? "bg-yellow-300 text-gray-800 cursor-not-allowed"
+                          : "bg-yellow-500 hover:bg-yellow-600 text-white"
+                      }`}
+                      disabled={job.isSaved}
                     >
-                      Save
+                      {job.isSaved ? "Saved ★" : "Save"}
                     </button>
                   </div>
                 </motion.div>
               );
             })
           ) : (
-            <p className="text-center text-gray-500 col-span-full">No jobs found.</p>
+            <p className="text-center text-gray-500 col-span-full">
+              No jobs found.
+            </p>
           )}
         </div>
 
@@ -127,7 +144,9 @@ const JobList = () => {
               </button>
             ))}
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
             >

@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
 import _ from "lodash";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001/api";
 
@@ -43,12 +46,12 @@ const useJobs = () => {
   // ✅ Fungsi untuk menyimpan pekerjaan (Save Job)
   const handleSaveJob = async (jobId) => {
     if (!user) {
-      console.warn("⚠️ User not logged in. Cannot save job.");
-      return;
+      toast.warning("⚠️ Please login to save jobs!");
+    return;
     }
     try {
       const response = await axios.post(
-        `${BASE_URL}/jobs/${jobId}/save`,  
+        `${BASE_URL}/api/jobs/${jobId}/save`,  
         {},
         { withCredentials: true }
       );
@@ -61,16 +64,19 @@ const useJobs = () => {
         )
       );
       console.log("🔍 Updated Saved Jobs:", jobs);
+      toast.success("✅ Job saved successfully!");
     } catch (error) {
       console.error("❌ Error saving job:", error);
+      toast.error("❌ Failed to save job.");
     }
   };
 
   // ✅ Fungsi untuk melamar pekerjaan (Apply Job)
   const handleApplyJob = async (jobId) => {
     if (!user) {
-      console.warn("⚠️ User not logged in. Cannot apply for job.");
+      toast.warning("⚠️ Please complete credentials to apply for jobs!");
       return;
+  
     }
 
     try {
@@ -87,9 +93,11 @@ const useJobs = () => {
           job.id === jobId ? { ...job, isApplied: true } : job
         )
       );
+      toast.success("🎉 Job application submitted!");
       console.log("🔍 Updated Applied Jobs:", jobs);
     } catch (error) {
       console.error("❌ Error applying for job:", error);
+      toast.error("❌ Failed to apply for job.");
     }
   };
 

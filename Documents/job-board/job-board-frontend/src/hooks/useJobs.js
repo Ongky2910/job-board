@@ -48,7 +48,7 @@ const useJobs = () => {
     }
     try {
       const response = await axios.post(
-        `${BASE_URL}/jobs/${jobId}/save`,  
+        `${BASE_URL}/api/jobs/${jobId}/save`,  
         {},
         { withCredentials: true }
       );

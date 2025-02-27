@@ -16,6 +16,7 @@ export default function Dashboard() {
     if (!user?.id) return;
 
     const fetchData = async () => {
+      
       setLoading(true);
       try {
         const [userRes, jobsRes] = await Promise.allSettled([
