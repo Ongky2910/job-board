@@ -16,16 +16,25 @@ export const UserProvider = ({ children }) => {
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    if (storedUser) {
+      setUser(storedUser);
+    }
+  }, []);
+  
+  useEffect(() => {
     checkAuth();
   }, []);
+  
 
   // ✅ Fungsi Login User
   const loginUser = async (email, password) => {
     try {
       console.log("🟢 Sending login request...", email, password);
-      const response = await axios.post(`${API_URL}/api/auth/login`,
+      const response = await axios.post(
+        `${API_URL}/api/auth/login`,
         { email, password },
-        { withCredentials: true } 
+        { withCredentials: true }
       );
   
       console.log("✅ Login Response:", response.data);
@@ -34,11 +43,8 @@ export const UserProvider = ({ children }) => {
         console.log("✅ Login Successful:", response.data);
         setUser(response.data.user);
   
-        // Cek apakah ada token
-        console.log("🔑 Token dari response:", response.data.token);
-        if (!response.data.token) {
-          console.error("❌ Token tidak ditemukan dalam response!");
-        }
+        // ✅ Simpan user ke localStorage setelah login sukses
+        localStorage.setItem("user", JSON.stringify(response.data.user));
   
         navigate("/dashboard");
       } else {
@@ -51,6 +57,7 @@ export const UserProvider = ({ children }) => {
     }
   };
   
+  
 
   // ✅ Fungsi Logout User
   const logoutUser = async () => {
@@ -61,13 +68,16 @@ export const UserProvider = ({ children }) => {
         {},
         { withCredentials: true } 
       );
+      
+      localStorage.removeItem("user"); // Hapus dari localStorage
       setUser(null); // Reset user state
       console.log("✅ User logged out successfully!");
-      navigate("/login"); // Redirect ke halaman login
+      navigate("/login");
     } catch (error) {
       console.error("❌ Logout failed:", error.response?.data || error.message);
     }
   };
+  
 
   // ✅ Fungsi untuk mengecek user saat pertama kali load
   const checkAuth = async () => {
@@ -78,14 +88,28 @@ export const UserProvider = ({ children }) => {
         { withCredentials: true }
       );
       console.log("✅ Authenticated User:", response.data.user);
+      
       setUser(response.data.user);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
     } catch (error) {
       console.warn("⚠️ User not authenticated:", error.response?.data || error.message);
-      setUser(null);
+  
+      // Debug: Cek apakah localStorage masih ada
+      console.log("📦 LocalStorage sebelum cek:", localStorage.getItem("user"));
+  
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      if (storedUser) {
+        console.log("✅ Menggunakan user dari localStorage:", storedUser);
+        setUser(storedUser);
+      } else {
+        console.log("❌ Tidak ada user di localStorage, reset state");
+        setUser(null);
+      }
     }
     setIsUserLoading(false);
   };
-
+  
+  
   return (
     <UserContext.Provider value={{ user, setUser, loginUser, logoutUser, isUserLoading, error }}>
       {children}

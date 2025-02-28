@@ -86,8 +86,9 @@ export const UserProvider = ({ children }) => {
     } catch (error) {
       console.warn("⚠️ User not authenticated:", error.response?.data || error.message);
       setUser(null);
+    } finally {
+      setIsUserLoading(false); 
     }
-    setIsUserLoading(false);
   };
 
   return (

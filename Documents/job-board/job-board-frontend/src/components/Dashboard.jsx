@@ -1,22 +1,35 @@
 import React, { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
 import useJobs from "../hooks/useJobs";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+axios.defaults.withCredentials = true;
+
 export default function Dashboard() {
-  const { user } = useUser() ?? { user: null };
+  const navigate = useNavigate();
+  const { user, setUser } = useUser() ?? { user: null, setUser: () => {} };
   const { jobs = [], setJobs = () => {} } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const API_URL = import.meta.env.VITE_BACKEND_URL;
+
+  // Ambil user dari localStorage saat pertama kali halaman dimuat
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    if (storedUser) {
+      setUser(storedUser);
+    } else {
+      navigate("/login");
+    }
+  }, [setUser, navigate]);
 
   useEffect(() => {
     if (!user?.id) return;
 
     const fetchData = async () => {
-      
       setLoading(true);
       try {
         const [userRes, jobsRes] = await Promise.allSettled([
@@ -37,6 +50,8 @@ export default function Dashboard() {
             jobApplied: userInfo.appliedJobs ? userInfo.appliedJobs.length : 0,
             jobSaved: userInfo.savedJobs ? userInfo.savedJobs.length : 0,
           });
+        } else {
+          navigate("/login"); 
         }
 
         if (
@@ -48,13 +63,18 @@ export default function Dashboard() {
         }
       } catch (error) {
         console.error("❌ Error fetching data:", error);
+        navigate("/login"); 
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, navigate, setJobs]);
+
+  const filteredJobs = jobs.filter((job) =>
+    job.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -73,7 +93,23 @@ export default function Dashboard() {
     <div className="min-h-screen bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
       <div className="container mx-auto p-8">
         <h1 className="text-3xl font-bold mb-4">Welcome, {userData.name}</h1>
+        <input
+          type="text"
+          placeholder="Search jobs..."
+          className="p-2 border rounded w-full mb-4"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
+        {filteredJobs.map((job) => (
+          <li
+            key={job.id}
+            className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg"
+          >
+            <h3 className="text-lg font-semibold">{job.title}</h3>
+            <p>{job.company}</p>
+          </li>
+        ))}
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4">Dashboard Overview</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

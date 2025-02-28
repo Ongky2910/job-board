@@ -175,14 +175,8 @@ const useJobs = () => {
       debouncedFetchRef.current();
       fetchUserJobCounts();
     }
-  }, [searchTerm, user]);
-
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      fetchJobs();
-      fetchUserJobCounts();
-    }
-  }, [filterType, contractType, workType, currentPage, user, isUserLoading]);
+  }, [searchTerm, filterType, contractType, workType, currentPage, user, isUserLoading]);
+  
 
   return {
     jobs,
