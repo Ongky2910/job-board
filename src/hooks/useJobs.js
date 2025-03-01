@@ -1,10 +1,9 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
 import _ from "lodash";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001/api";
 
@@ -26,88 +25,28 @@ const useJobs = () => {
 
   const debouncedFetchRef = useRef();
 
-  const fetchUserJobCounts = async () => {
+  // ✅ Ambil jumlah pekerjaan yang telah disimpan & dilamar oleh user
+  const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, { withCredentials: true });
+      const response = await axios.get(`${BASE_URL}/auth/dashboard`, {
+        withCredentials: true,
+      });
       console.log("📊 Dashboard data:", response.data);
       if (response.data?.user) {
         setJobsAppliedCount(response.data.user.appliedJobs?.length || 0);
         setJobsSavedCount(response.data.user.savedJobs?.length || 0);
-        console.log("✅ Updated Jobs Applied Count:", response.data.user.appliedJobs?.length || 0);
-        console.log("✅ Updated Jobs Saved Count:", response.data.user.savedJobs?.length || 0);
       }
     } catch (error) {
       console.error("❌ Error fetching user job counts:", error);
     }
-  };
+  }, [user]);
 
+  // ✅ Fungsi utama untuk mengambil data pekerjaan
+  const fetchJobs = useCallback(async () => {
+    if (!user?.id || isUserLoading) return;
 
-  // ✅ Fungsi untuk menyimpan pekerjaan (Save Job)
-  const handleSaveJob = async (jobId) => {
-    if (!user) {
-      toast.warning("⚠️ Please login to save jobs!");
-    return;
-    }
-    try {
-      const response = await axios.post(
-        `${BASE_URL}/api/jobs/${jobId}/save`,  
-        {},
-        { withCredentials: true }
-      );
-      console.log("✅ Job saved successfully:", response.data);
-
-      // 🔄 Update state untuk menandai pekerjaan telah disimpan
-      setJobs((prevJobs) =>
-        prevJobs.map((job) =>
-          job.id === jobId ? { ...job, isSaved: true } : job
-        )
-      );
-      console.log("🔍 Updated Saved Jobs:", jobs);
-      toast.success("✅ Job saved successfully!");
-    } catch (error) {
-      console.error("❌ Error saving job:", error);
-      toast.error("❌ Failed to save job.");
-    }
-  };
-
-  // ✅ Fungsi untuk melamar pekerjaan (Apply Job)
-  const handleApplyJob = async (jobId) => {
-    if (!user) {
-      toast.warning("⚠️ Please complete credentials to apply for jobs!");
-      return;
-  
-    }
-
-    try {
-      const response = await axios.post(
-        `${BASE_URL}/jobs/${jobId}/apply`,  
-        {},
-        { withCredentials: true }
-      );
-      console.log("✅ Job applied successfully:", response.data);
-
-      // 🔄 Update state untuk menandai pekerjaan telah dilamar
-      setJobs((prevJobs) =>
-        prevJobs.map((job) =>
-          job.id === jobId ? { ...job, isApplied: true } : job
-        )
-      );
-      toast.success("🎉 Job application submitted!");
-      console.log("🔍 Updated Applied Jobs:", jobs);
-    } catch (error) {
-      console.error("❌ Error applying for job:", error);
-      toast.error("❌ Failed to apply for job.");
-    }
-  };
-
-  // ✅ Fungsi untuk mengambil data pekerjaan
-  const fetchJobs = async () => {
-    if (!user?.id || isUserLoading) {
-      console.warn("⏳ Skipping fetch: User not loaded yet.");
-      return;
-    }
-
+    console.log("🔄 Fetching jobs...");
     setIsLoading(true);
     setError(null);
 
@@ -126,15 +65,22 @@ const useJobs = () => {
 
       const [localJobsResponse, externalJobsResponse] = await Promise.all([
         axios.get(`${BASE_URL}/api/jobs`, { params, withCredentials: true }),
-        axios.get(`${BASE_URL}/api/jobs/external-jobs`, { params, withCredentials: true }),
+        axios.get(`${BASE_URL}/api/jobs/external-jobs`, {
+          params,
+          withCredentials: true,
+        }),
       ]);
 
       let allJobs = [
-        ...(Array.isArray(localJobsResponse.data.jobs) ? localJobsResponse.data.jobs : []),
-        ...(Array.isArray(externalJobsResponse.data) ? externalJobsResponse.data : []),
+        ...(Array.isArray(localJobsResponse.data.jobs)
+          ? localJobsResponse.data.jobs
+          : []),
+        ...(Array.isArray(externalJobsResponse.data)
+          ? externalJobsResponse.data
+          : []),
       ];
 
-      // 🔍 Filter pekerjaan secara lokal untuk memastikan hasil yang benar
+      // 🔍 Pastikan hasil pencarian berfungsi dengan baik
       if (searchTerm.trim()) {
         const lowerSearch = searchTerm.trim().toLowerCase();
         allJobs = allJobs.filter(
@@ -151,11 +97,10 @@ const useJobs = () => {
         );
       }
 
-      // ✅ Cek apakah data berubah sebelum update state
       setJobs(allJobs);
       setTotalPages(localJobsResponse.data.totalPages || 1);
     } catch (err) {
-      console.error("❌ Error occurred:", err);
+      console.error("❌ Error fetching jobs:", err);
       if (err.response?.status === 401) {
         logoutUser();
       } else {
@@ -164,23 +109,77 @@ const useJobs = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [user, isUserLoading, searchTerm, filterType, contractType, workType, currentPage]);
+
+  // ✅ Fungsi untuk menyimpan pekerjaan (Save Job)
+  const handleSaveJob = async (jobId) => {
+    if (!user) {
+      toast.warning("⚠️ Please login to save jobs!");
+      return;
+    }
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/api/jobs/${jobId}/save`,
+        {},
+        { withCredentials: true }
+      );
+      console.log("✅ Job saved successfully:", response.data);
+
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.id === jobId ? { ...job, isSaved: true } : job
+        )
+      );
+      toast.success("✅ Job saved successfully!");
+    } catch (error) {
+      console.error("❌ Error saving job:", error);
+      toast.error("❌ Failed to save job.");
+    }
   };
 
+  // ✅ Fungsi untuk melamar pekerjaan (Apply Job)
+  const handleApplyJob = async (jobId) => {
+    if (!user) {
+      toast.warning("⚠️ Please complete credentials to apply for jobs!");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/api/jobs/${jobId}/apply`,
+        {},
+        { withCredentials: true }
+      );
+      console.log("✅ Job applied successfully:", response.data);
+
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.id === jobId ? { ...job, isApplied: true } : job
+        )
+      );
+      toast.success("🎉 Job application submitted!");
+    } catch (error) {
+      console.error("❌ Error applying for job:", error);
+      toast.error("❌ Failed to apply for job.");
+    }
+  };
+
+  // ✅ Atur debounce untuk fetch jobs
   useEffect(() => {
     debouncedFetchRef.current = _.debounce(fetchJobs, 500);
-  }, []);
+  }, [fetchJobs]);
 
+  // ✅ Pastikan data pekerjaan di-fetch saat pertama kali
   useEffect(() => {
     if (!isUserLoading && user) {
-      debouncedFetchRef.current();
+      fetchJobs(); // panggil langsung untuk memastikan data muncul pertama kali
+      debouncedFetchRef.current(); // gunakan debounce untuk perubahan state
       fetchUserJobCounts();
     }
-  }, [searchTerm, filterType, contractType, workType, currentPage, user, isUserLoading]);
-  
+  }, [fetchJobs, fetchUserJobCounts]);
 
   return {
     jobs,
-    setJobs,
     isLoading,
     error,
     totalPages,
@@ -194,7 +193,6 @@ const useJobs = () => {
     setSearchTerm,
     currentPage,
     setCurrentPage,
-    isUserLoading,
     handleSaveJob,
     handleApplyJob,
     jobsAppliedCount,

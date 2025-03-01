@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
 import _ from "lodash";
@@ -21,9 +21,7 @@ const useJobs = () => {
   const [jobsAppliedCount, setJobsAppliedCount] = useState(0);
   const [jobsSavedCount, setJobsSavedCount] = useState(0);
 
-  const debouncedFetchRef = useRef(_.debounce(fetchJobs, 500));
-
-  const fetchUserJobCounts = async () => {
+  const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
       const response = await axios.get(`${BASE_URL}/auth/dashboard`, { withCredentials: true });
@@ -35,32 +33,13 @@ const useJobs = () => {
     } catch (error) {
       console.error("❌ Error fetching user job counts:", error);
     }
-  };
+  }, [user]);
 
-  const handleSaveJob = async (jobId) => {
-    if (!user) return;
-    try {
-      await axios.post(`${BASE_URL}/jobs/${jobId}/save`, {}, { withCredentials: true });
-      setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isSaved: true } : job)));
-    } catch (error) {
-      console.error("❌ Error saving job:", error);
-    }
-  };
-
-  const handleApplyJob = async (jobId) => {
-    if (!user) return;
-    try {
-      await axios.post(`${BASE_URL}/jobs/${jobId}/apply`, {}, { withCredentials: true });
-      setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isApplied: true } : job)));
-    } catch (error) {
-      console.error("❌ Error applying for job:", error);
-    }
-  };
-
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     if (!user?.id || isUserLoading) return;
     setIsLoading(true);
     setError(null);
+    console.log("🔄 Fetching jobs...", { user, isUserLoading });
 
     try {
       const params = {
@@ -87,31 +66,45 @@ const useJobs = () => {
       setTotalPages(localJobsResponse.data.totalPages || 1);
     } catch (err) {
       console.error("❌ Error occurred:", err);
-      if (err.response?.status === 401) logoutUser();
-      else setError(err.response?.data?.message || "Failed to fetch jobs.");
+      if (err.response?.status === 401) {
+        console.warn("⚠️ User unauthorized, logging out...");
+        logoutUser();
+      } else {
+        setError(err.response?.data?.message || "Failed to fetch jobs.");
+      }
     } finally {
       setIsLoading(false);
     }
+  }, [user, isUserLoading, searchTerm, filterType, contractType, workType, currentPage]);
+
+  const debouncedFetchJobs = useRef(_.debounce(fetchJobs, 500));
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      debouncedFetchJobs.current();
+      fetchUserJobCounts();
+    }
+  }, [fetchJobs, fetchUserJobCounts]);
+
+  const handleSaveJob = async (jobId) => {
+    if (!user) return;
+    try {
+      await axios.post(`${BASE_URL}/jobs/${jobId}/save`, {}, { withCredentials: true });
+      setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isSaved: true } : job)));
+    } catch (error) {
+      console.error("❌ Error saving job:", error);
+    }
   };
 
-  useEffect(() => {
-    debouncedFetchRef.current = _.debounce(fetchJobs, 500);
-  }, []);
-
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      debouncedFetchRef.current();
-      fetchUserJobCounts();
+  const handleApplyJob = async (jobId) => {
+    if (!user) return;
+    try {
+      await axios.post(`${BASE_URL}/jobs/${jobId}/apply`, {}, { withCredentials: true });
+      setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isApplied: true } : job)));
+    } catch (error) {
+      console.error("❌ Error applying for job:", error);
     }
-  }, [searchTerm, user]);
-
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      console.log("🔄 Fetching jobs on page change:", currentPage);
-      fetchJobs();
-      fetchUserJobCounts();
-    }
-  }, [filterType, contractType, workType, currentPage, user, isUserLoading]);
+  };
 
   return {
     jobs,
