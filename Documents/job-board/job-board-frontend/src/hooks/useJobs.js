@@ -3,7 +3,10 @@ import axios from "axios";
 import { useUser } from "../context/UserContext";
 import _ from "lodash";
 
-const BASE_URL = "http://localhost:5001/api";
+const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001/api";
+console.log("✅ BASE_URL:", BASE_URL);
+
+
 
 const useJobs = () => {
   const { user, isUserLoading, logoutUser } = useUser();
@@ -104,6 +107,8 @@ const useJobs = () => {
 
   const handleSaveJob = async (jobId) => {
     if (!user) return;
+    console.log("Saving for job:", jobId); 
+
     try {
       await axios.post(`${BASE_URL}/jobs/${jobId}/save`, {}, { withCredentials: true });
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isSaved: true } : job)));
@@ -119,6 +124,8 @@ const useJobs = () => {
 
   const handleApplyJob = async (jobId) => {
     if (!user) return;
+    console.log("Applying for job:", jobId); 
+
     try {
       await axios.post(`${BASE_URL}/jobs/${jobId}/apply`, {}, { withCredentials: true });
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isApplied: true } : job)));

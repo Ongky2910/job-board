@@ -1,102 +1,88 @@
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../App";
 import { FiSun, FiMoon, FiLogOut } from "react-icons/fi";
 import { useUser } from "../context/UserContext";
-import axios from "axios";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setUser, logoutUser } = useUser();
+  const { user, logoutUser } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
-
+  console.log("✅ Navbar dirender!");
+  
   useEffect(() => {
-    if (user) return;
-  
-    const controller = new AbortController();
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/api/auth/dashboard`, {
-          withCredentials: true,
-          signal: controller.signal, 
-        });
-        setUser(response.data.user);
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        logoutUser();
-      }
-    };
-  
-    fetchUser();
-    return () => controller.abort(); 
-  }, [user, setUser, logoutUser, API_URL]);
-  
-
-  // 🔥 Solusi: Tutup menu setelah pindah halaman
-  useEffect(() => {
+    console.log("navigasi berubah, menu ditutup");
     setIsOpen(false);
   }, [location.pathname]);
+
+  const handleNavigate = (path) => {
+    console.log(`Navigasi ke: ${path}, Menutup menu...`);
+    navigate(path, { replace: true });
+    setIsOpen(false);
+  };
 
   return (
     <nav className="bg-blue-600 dark:bg-blue-950 text-white p-4 sticky top-0 z-10 shadow-lg transition-all duration-300 font-roboto">
       <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold">
+        <button
+          onClick={() => handleNavigate("/")}
+          className="text-2xl font-bold"
+        >
           Job Board
-        </Link>
+        </button>
 
-        {user ? (
-          <ul className="hidden md:flex space-x-8 items-center">
-            <li>
-              <Link to="/dashboard" className="hover:text-blue-300 font-bold"  onClickCapture={() => setIsOpen(false)}>
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/edit-profile"
-                className="hover:text-blue-300 font-bold"
-              >
-                Edit Profile
-              </Link>
-            </li>
-            <li>
-              <button
-                onClick={logoutUser}
-                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition flex items-center justify-center"
-              >
-                <FiLogOut size={20} />
-              </button>
-            </li>
-          </ul>
-        ) : (
-          <ul className="hidden md:flex space-x-8 items-center">
-            <li>
-              <Link to="/" className="hover:text-blue-300 font-bold">
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link to="/jobs" className="hover:text-blue-300 font-bold">
-                Jobs
-              </Link>
-            </li>
-            <li>
-              <Link to="/saved-jobs" className="hover:text-blue-300 font-bold">
-                Saved Jobs
-              </Link>
-            </li>
-            <li>
-              <Link to="/contact" className="hover:text-blue-300 font-bold">
-                Contact
-              </Link>
-            </li>
-          </ul>
-        )}
+        {/* Desktop Menu */}
+        <ul className="hidden md:flex space-x-8 items-center">
+          {user ? (
+            <>
+              <li>
+                <button
+                  onClick={() => handleNavigate("/dashboard")}
+                  className="hover:text-blue-300 font-bold"
+                >
+                  Dashboard
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleNavigate("/edit-profile")}
+                  className="hover:text-blue-300 font-bold"
+                >
+                  Edit Profile
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    logoutUser();
+                    setIsOpen(false); // Pastikan menu tertutup setelah logout
+                  }}
+                  className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition flex items-center justify-center"
+                >
+                  <FiLogOut size={20} />
+                </button>
+              </li>
+            </>
+          ) : (
+            ["Home", "Jobs", "Saved Jobs", "Contact"].map((item) => (
+              <li key={item}>
+                <button
+                  onClick={() =>
+                    handleNavigate(`/${item.toLowerCase().replace(" ", "-")}`)
+                  }
+                  className="hover:text-blue-300 font-bold"
+                >
+                  {item}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
 
+        {/* Theme Toggle & Mobile Menu Button */}
         <div className="flex items-center space-x-4">
           <button
             onClick={toggleDarkMode}
@@ -111,14 +97,15 @@ export default function Navbar() {
 
           {/* Menu Hamburger (Mobile) */}
           <button
-  className="md:hidden p-2 bg-transparent z-50 relative"
-  onClick={() => setIsOpen((prev) => !prev)}
-  aria-label="Toggle menu"
->
-  {isOpen ? <X size={28} /> : <Menu size={28} />}
-</button>
-
-
+            className="md:hidden p-2 bg-transparent z-50 relative"
+            onClick={() => {
+              console.log("Menu toggle:", !isOpen);
+              setIsOpen(!isOpen);
+            }}
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X size={28} /> : <Menu size={28} />}
+          </button>
         </div>
       </div>
 
@@ -126,37 +113,37 @@ export default function Navbar() {
       {isOpen && (
         <div
           className="md:hidden fixed inset-0 bg-blue-600 dark:bg-blue-950 z-10 pt-20"
-          onClick={() => setIsOpen(false)}
+          onClick={() => setIsOpen(false)} // Tutup menu saat klik di luar
         >
-          <div className="container mx-auto p-4">
-            {user ? (
-              <ul className="flex flex-col space-y-6 items-center text-xl">
-                <li>
-                  <Link
-                    to="/dashboard"
+          <div
+            className="container mx-auto p-4"
+            onClick={(e) => {
+              e.stopPropagation(); 
+              console.log("Klik di dalam menu, menu tidak harus tertutup");
+            }}
+          >
+            <ul className="flex flex-col space-y-6 items-center text-xl">
+              {(user
+                ? ["Dashboard", "Edit Profile"]
+                : ["Home", "Jobs", "Saved Jobs", "Contact"]
+              ).map((item) => (
+                <li key={item}>
+                  <button
+                    onClick={() =>
+                      handleNavigate(`/${item.toLowerCase().replace(" ", "-")}`)
+                    }
                     className="hover:text-blue-300 font-bold block py-2"
-                    onClickCapture={() => setIsOpen(false)}
                   >
-                    Dashboard
-                  </Link>
+                    {item}
+                  </button>
                 </li>
-                <li>
-                  <Link
-                    to="/edit-profile"
-                    className="hover:text-blue-300 font-bold block py-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsOpen(false);
-                    }}
-                  >
-                    Edit Profile
-                  </Link>
-                </li>
+              ))}
+              {user && (
                 <li>
                   <button
                     onClick={() => {
-                      setIsOpen(false);
                       logoutUser();
+                      setIsOpen(false);
                     }}
                     className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded transition"
                   >
@@ -164,60 +151,8 @@ export default function Navbar() {
                     <span>Logout</span>
                   </button>
                 </li>
-              </ul>
-            ) : (
-              <ul className="flex flex-col space-y-6 items-center text-xl">
-                <li>
-                  <Link
-                    to="/"
-                    className="hover:text-blue-300 font-bold block py-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsOpen(false);
-                    }}
-                  >
-                    Home
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/jobs"
-                    className="hover:text-blue-300 font-bold block py-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsOpen(false);
-                    }}
-                  >
-                    Jobs
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/saved-jobs"
-                    className="hover:text-blue-300 font-bold block py-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsOpen(false);
-                    }}
-                  >
-                    Saved Jobs
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/contact"
-                    className="hover:text-blue-300 font-bold block py-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsOpen(false);
-                    }}
-                  >
-                    Contact
-                  </Link>
-                  ç
-                </li>
-              </ul>
-            )}
+              )}
+            </ul>
           </div>
         </div>
       )}

@@ -62,6 +62,7 @@ const PrivateRoute = ({ children }) => {
 
 // ✅ AppContent yang menggunakan useJobs()
 const AppContent = () => {
+  console.log("AppContent dirender!");
   const { jobs, isLoading } = useJobs();
 
   return (

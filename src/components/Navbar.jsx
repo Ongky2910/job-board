@@ -99,23 +99,27 @@ export default function Navbar() {
 
         {/* Menu Hamburger (Mobile) */}
         <div className="flex md:hidden items-center space-x-3">
-        <button
-  onClick={toggleDarkMode}
-  className="inline-flex items-center justify-center bg-transparent dark:bg-transparent p-0 transition transform hover:scale-110"
->
-  {isDarkMode ? <FiMoon size={24} className="text-gray-400" /> : <FiSun size={24} className="text-yellow-300" />}
-</button>
+          <button
+            onClick={toggleDarkMode}
+            className="inline-flex items-center justify-center bg-transparent dark:bg-transparent p-0 transition transform hover:scale-110"
+          >
+            {isDarkMode ? (
+              <FiMoon size={24} className="text-gray-400" />
+            ) : (
+              <FiSun size={24} className="text-yellow-300" />
+            )}
+          </button>
 
           {/* Logout Button */}
           {user && (
-  <button
-    onClick={logoutUser}
-    className="inline-flex items-center justify-center transition bg-transparent dark:bg-transparent transform hover:scale-110"
-    title="Logout"
-  >
-    <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
-  </button>
-)}
+            <button
+              onClick={logoutUser}
+              className="inline-flex items-center justify-center transition bg-transparent dark:bg-transparent transform hover:scale-110"
+              title="Logout"
+            >
+              <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
+            </button>
+          )}
           {/* Hamburger Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -134,6 +138,7 @@ export default function Navbar() {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
           className="md:hidden bg-blue-700 dark:bg-blue-900 text-white p-4 mt-2 rounded-lg shadow-lg"
+          onClick={(e) => e.stopPropagation()} 
         >
           <ul className="flex flex-col space-y-4">
             {["Home", "Jobs", "Saved Jobs", "Contact"].map((item, index) => (
