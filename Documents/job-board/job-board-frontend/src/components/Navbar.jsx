@@ -15,10 +15,14 @@ export default function Navbar() {
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
+    if (user) return;
+  
+    const controller = new AbortController();
     const fetchUser = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/auth/dashboard`, {
           withCredentials: true,
+          signal: controller.signal, 
         });
         setUser(response.data.user);
       } catch (error) {
@@ -26,11 +30,11 @@ export default function Navbar() {
         logoutUser();
       }
     };
-
-    if (!user) {
-      fetchUser();
-    }
+  
+    fetchUser();
+    return () => controller.abort(); 
   }, [user, setUser, logoutUser, API_URL]);
+  
 
   // 🔥 Solusi: Tutup menu setelah pindah halaman
   useEffect(() => {
@@ -47,7 +51,7 @@ export default function Navbar() {
         {user ? (
           <ul className="hidden md:flex space-x-8 items-center">
             <li>
-              <Link to="/dashboard" className="hover:text-blue-300 font-bold">
+              <Link to="/dashboard" className="hover:text-blue-300 font-bold"  onClickCapture={() => setIsOpen(false)}>
                 Dashboard
               </Link>
             </li>

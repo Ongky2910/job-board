@@ -23,8 +23,10 @@ export default function Dashboard() {
       setUser(storedUser);
     } else {
       navigate("/login");
+      return; 
     }
   }, [setUser, navigate]);
+  
 
   useEffect(() => {
     if (!user?.id) return;
@@ -41,18 +43,19 @@ export default function Dashboard() {
           }),
         ]);
 
-        if (userRes.status === "fulfilled" && userRes.value.data) {
-          console.log("📌 User Data from API:", userRes.value.data);
-          const userInfo = userRes.value.data.user || {};
+        if (userRes.status === "fulfilled" && userRes.value.data?.user) {
+          const userInfo = userRes.value.data.user;
           setUserData({
-            name: userInfo.name || "N/A",
-            email: userInfo.email || "N/A",
-            jobApplied: userInfo.appliedJobs ? userInfo.appliedJobs.length : 0,
-            jobSaved: userInfo.savedJobs ? userInfo.savedJobs.length : 0,
+            name: userInfo.name ?? "N/A",
+            email: userInfo.email ?? "N/A",
+            jobApplied: Array.isArray(userInfo.appliedJobs) ? userInfo.appliedJobs.length : 0,
+            jobSaved: Array.isArray(userInfo.savedJobs) ? userInfo.savedJobs.length : 0,
           });
         } else {
-          navigate("/login"); 
+          console.warn("User data invalid:", userRes);
+          navigate("/login");
         }
+        
 
         if (
           jobsRes.status === "fulfilled" &&
