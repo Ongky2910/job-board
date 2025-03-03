@@ -87,27 +87,23 @@ export const UserProvider = ({ children }) => {
         `${API_URL}/api/auth/verify-token`,
         { withCredentials: true }
       );
-      console.log("✅ Authenticated User:", response.data.user);
+  
+      console.log("✅ User authenticated:", response.data);
       
-      setUser(response.data.user);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-    } catch (error) {
-      console.warn("⚠️ User not authenticated:", error.response?.data || error.message);
-  
-      // Debug: Cek apakah localStorage masih ada
-      console.log("📦 LocalStorage sebelum cek:", localStorage.getItem("user"));
-  
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-      if (storedUser) {
-        console.log("✅ Menggunakan user dari localStorage:", storedUser);
-        setUser(storedUser);
+      if (response.data.user) {
+        setUser(response.data.user);
       } else {
-        console.log("❌ Tidak ada user di localStorage, reset state");
+        console.warn("⚠️ No user found in response.");
         setUser(null);
       }
+    } catch (error) {
+      console.error("❌ Error checking auth:", error.response?.data || error.message);
+      setUser(null);
     }
-    setIsUserLoading(false);
+    setIsUserLoading(false); // Pastikan loading state selesai
   };
+  
+  
   
   
   return (
