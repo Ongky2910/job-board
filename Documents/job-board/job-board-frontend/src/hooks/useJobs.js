@@ -21,14 +21,30 @@ const useJobs = () => {
   const [jobsAppliedCount, setJobsAppliedCount] = useState(0);
   const [jobsSavedCount, setJobsSavedCount] = useState(0);
 
+  // Load counts from localStorage on initial render
+  useEffect(() => {
+    const savedAppliedCount = localStorage.getItem('jobsAppliedCount');
+    const savedSavedCount = localStorage.getItem('jobsSavedCount');
+    
+    if (savedAppliedCount) setJobsAppliedCount(parseInt(savedAppliedCount));
+    if (savedSavedCount) setJobsSavedCount(parseInt(savedSavedCount));
+  }, []);
+
   const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await axios.get(`${BASE_URL}/auth/dashboard`, { withCredentials: true });
+      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, { withCredentials: true });
       console.log("📊 Dashboard data:", response.data);
       if (response.data?.user) {
-        setJobsAppliedCount(response.data.user.appliedJobs?.length || 0);
-        setJobsSavedCount(response.data.user.savedJobs?.length || 0);
+        const appliedCount = response.data.user.appliedJobs?.length || 0;
+        const savedCount = response.data.user.savedJobs?.length || 0;
+        
+        setJobsAppliedCount(appliedCount);
+        setJobsSavedCount(savedCount);
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('jobsAppliedCount', appliedCount);
+        localStorage.setItem('jobsSavedCount', savedCount);
       }
     } catch (error) {
       console.error("❌ Error fetching user job counts:", error);
@@ -75,7 +91,7 @@ const useJobs = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, isUserLoading, searchTerm, filterType, contractType, workType, currentPage]);
+  }, [user, isUserLoading, searchTerm, filterType, contractType, workType, currentPage, logoutUser]);
 
   const debouncedFetchJobs = useRef(_.debounce(fetchJobs, 500));
 
@@ -84,13 +100,18 @@ const useJobs = () => {
       debouncedFetchJobs.current();
       fetchUserJobCounts();
     }
-  }, [fetchJobs, fetchUserJobCounts]);
+  }, [fetchJobs, fetchUserJobCounts, isUserLoading, user]);  // Added missing dependencies
 
   const handleSaveJob = async (jobId) => {
     if (!user) return;
     try {
       await axios.post(`${BASE_URL}/jobs/${jobId}/save`, {}, { withCredentials: true });
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isSaved: true } : job)));
+      
+      // Update count immediately and persist
+      const newCount = jobsSavedCount + 1;
+      setJobsSavedCount(newCount);
+      localStorage.setItem('jobsSavedCount', newCount);
     } catch (error) {
       console.error("❌ Error saving job:", error);
     }
@@ -101,6 +122,11 @@ const useJobs = () => {
     try {
       await axios.post(`${BASE_URL}/jobs/${jobId}/apply`, {}, { withCredentials: true });
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isApplied: true } : job)));
+      
+      // Update count immediately and persist
+      const newCount = jobsAppliedCount + 1;
+      setJobsAppliedCount(newCount);
+      localStorage.setItem('jobsAppliedCount', newCount);
     } catch (error) {
       console.error("❌ Error applying for job:", error);
     }

@@ -32,14 +32,19 @@ export default function Navbar() {
     }
   }, [user, setUser, logoutUser, API_URL]);
 
+  // Close mobile menu when navigating
+  useEffect(() => {
+    return () => setIsOpen(false);
+  }, [navigate]);
+
   return (
     <nav className="bg-blue-600 dark:bg-blue-950 text-white p-4 sticky top-0 z-10 shadow-lg transition-all duration-300 font-roboto">
       <div className="container mx-auto flex justify-between items-center">
         <Link to="/" className="text-2xl font-bold">Job Board</Link>
 
-        {/* Menu untuk user login */}
+        {/* Menu untuk user login - Desktop */}
         {user ? (
-          <ul className="flex space-x-8 items-center">
+          <ul className="hidden md:flex space-x-8 items-center">
             <li>
               <Link to="/dashboard" className="hover:text-blue-300 font-bold">
                 Dashboard
@@ -62,7 +67,7 @@ export default function Navbar() {
             </li>
           </ul>
         ) : (
-          // Menu untuk guest (belum login)
+          // Menu untuk guest (belum login) - Desktop
           <ul className="hidden md:flex space-x-8 items-center">
             <li><Link to="/" className="hover:text-blue-300 font-bold">Home</Link></li>
             <li><Link to="/jobs" className="hover:text-blue-300 font-bold">Jobs</Link></li>
@@ -71,23 +76,112 @@ export default function Navbar() {
           </ul>
         )}
 
-        {/* Dark Mode Toggle */}
-        <button
-          onClick={toggleDarkMode}
-          className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 p-2 rounded-full md:mr-4 transition"
-        >
-          {isDarkMode ? (
-            <FiMoon size={24} className="text-gray-400" />
-          ) : (
-            <FiSun size={24} className="text-yellow-300" />
-          )}
-        </button>
+        <div className="flex items-center space-x-4">
+          {/* Dark Mode Toggle */}
+          <button
+            onClick={toggleDarkMode}
+            className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 p-2 rounded-full transition"
+          >
+            {isDarkMode ? (
+              <FiMoon size={24} className="text-gray-400" />
+            ) : (
+              <FiSun size={24} className="text-yellow-300" />
+            )}
+          </button>
 
-        {/* Menu Hamburger (Mobile) */}
-        <button className="md:hidden p-2 bg-transparent" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
+          {/* Menu Hamburger (Mobile) */}
+          <button 
+            className="md:hidden p-2 bg-transparent z-20" 
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X size={28} /> : <Menu size={28} />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Menu - This was missing in your original code */}
+      {isOpen && (
+        <div className="md:hidden fixed inset-0 bg-blue-600 dark:bg-blue-950 z-10 pt-20">
+          <div className="container mx-auto p-4">
+            {user ? (
+              // Mobile menu for logged-in users
+              <ul className="flex flex-col space-y-6 items-center text-xl">
+                <li>
+                  <Link 
+                    to="/dashboard" 
+                    className="hover:text-blue-300 font-bold block py-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/edit-profile" 
+                    className="hover:text-blue-300 font-bold block py-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Edit Profile
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      logoutUser();
+                    }}
+                    className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded transition"
+                  >
+                    <FiLogOut size={20} />
+                    <span>Logout</span>
+                  </button>
+                </li>
+              </ul>
+            ) : (
+              // Mobile menu for guests
+              <ul className="flex flex-col space-y-6 items-center text-xl">
+                <li>
+                  <Link 
+                    to="/" 
+                    className="hover:text-blue-300 font-bold block py-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/jobs" 
+                    className="hover:text-blue-300 font-bold block py-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Jobs
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/saved-jobs" 
+                    className="hover:text-blue-300 font-bold block py-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Saved Jobs
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/contact" 
+                    className="hover:text-blue-300 font-bold block py-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

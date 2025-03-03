@@ -29,7 +29,7 @@ const useJobs = () => {
   const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await axios.get(`${BASE_URL}/auth/dashboard`, {
+      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, {
         withCredentials: true,
       });
       console.log("📊 Dashboard data:", response.data);
