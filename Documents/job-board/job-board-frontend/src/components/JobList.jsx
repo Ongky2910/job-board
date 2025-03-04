@@ -24,7 +24,9 @@ const JobList = () => {
   } = useJobs();
 
   // Debug external jobs - check if they're coming through
-  const [localJobs, externalJobs] = useState([], []);
+  const [localJobs, setLocalJobs] = useState([]);
+const [externalJobs, setExternalJobs] = useState([]);
+
   
   useEffect(() => {
     if (jobs && jobs.length > 0) {

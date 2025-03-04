@@ -29,7 +29,7 @@ const useJobs = () => {
   const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await axios.get(`${BASE_URL}/auth/dashboard`, {
+      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, {
         withCredentials: true,
       });
       console.log("📊 Dashboard data:", response.data);
@@ -51,6 +51,7 @@ const useJobs = () => {
     setError(null);
 
     try {
+      setError(null);
       const params = {
         user_id: user.id,
         search: searchTerm.trim(),
@@ -75,9 +76,7 @@ const useJobs = () => {
         ...(Array.isArray(localJobsResponse.data.jobs)
           ? localJobsResponse.data.jobs
           : []),
-        ...(Array.isArray(externalJobsResponse.data)
-          ? externalJobsResponse.data
-          : []),
+          ...(Array.isArray(externalJobsResponse.data.jobs) ? externalJobsResponse.data.jobs : []),
       ];
 
       // 🔍 Pastikan hasil pencarian berfungsi dengan baik
@@ -99,6 +98,7 @@ const useJobs = () => {
 
       setJobs(allJobs);
       setTotalPages(localJobsResponse.data.totalPages || 1);
+      setError(null);
     } catch (err) {
       console.error("❌ Error fetching jobs:", err);
       if (err.response?.status === 401) {
