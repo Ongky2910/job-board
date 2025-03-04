@@ -274,26 +274,24 @@ const getSavedJobs = async (req, res) => {
   }
 };
 
-async function fetchJobsWithRetry(url, retries = 5, delay = 2000) {
-  for (let i = 0; i < retries; i++) {
+// Fungsi untuk mengambil data dengan retry jika gagal dengan exponential backoff
+const fetchJobsWithRetry = async (url, retries = 5, delay = 2000) => {
+  for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await axios.get(url);
       return response.data;
     } catch (error) {
-      if (
-        error.response &&
-        (error.response.status === 429 || error.response.status === 503)
-      ) {
+      if (error.response && (error.response.status === 429 || error.response.status === 503)) {
         console.warn(`Rate limit hit! Retrying in ${delay / 1000} seconds...`);
         await new Promise((res) => setTimeout(res, delay));
-        delay *= 2; // Exponential Backoff: Delay naik 2x setiap retry
+        delay *= 2;
       } else {
-        throw error; // Lempar error jika bukan 429 atau 503
+        throw error;
       }
     }
   }
-  throw new Error("Failed to fetch jobs from Adzuna after multiple attempts.");
-}
+  throw new Error("Failed to fetch jobs after multiple attempts.");
+};
 
 // ✅ Mengambil daftar pekerjaan dari API eksternal
 const getExternalJobListings = async (req, res) => {
@@ -313,12 +311,10 @@ const getExternalJobListings = async (req, res) => {
       return res.status(500).json({ message: "Missing API credentials" });
     }
 
-    const resultsPerPage = parseInt(req.query.results_per_page) || 50; // Ambil 50 job per halaman
+    const resultsPerPage = parseInt(req.query.results_per_page) || 50;
     const page = parseInt(req.query.page) || 1;
 
-    const apiUrl = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${app_id}&app_key=${app_key}&where=${encodeURIComponent(
-      location
-    )}${keyword}&results_per_page=${resultsPerPage}`;
+    const apiUrl = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${app_id}&app_key=${app_key}&where=${encodeURIComponent(location)}${keyword}&results_per_page=${resultsPerPage}`;
 
     console.log("Fetching data from:", apiUrl);
 
@@ -333,49 +329,42 @@ const getExternalJobListings = async (req, res) => {
 
     let externalJobs = jobData.results;
 
-    let savedJobs = await Promise.all(
-      externalJobs.map(async (job) => {
-        let existingJob = await Job.findOne({ externalId: job.id });
+    let newJobs = externalJobs.filter((job) => job.id).map((job) => ({
+      externalId: job.id,
+      title: job.title,
+      company: job.company?.display_name || "Unknown Company",
+      description: job.description || "No description available.",
+      location: job.location?.display_name || "Unknown Location",
+      contractType: job.contract_time
+        ? job.contract_time.replace("_", "-").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+        : "Full-Time",
+      workType: job.category?.label?.toLowerCase().includes("remote")
+        ? "Remote"
+        : job.category?.label?.toLowerCase().includes("hybrid")
+        ? "Hybrid"
+        : "Onsite",
+    }));
 
-        if (!existingJob) {
-          let workType = "Onsite"; // Default
+    let savedJobs = await Job.find({ externalId: { $in: newJobs.map((job) => job.externalId) } });
+    let existingJobIds = new Set(savedJobs.map((job) => job.externalId));
 
-          if (job.category?.label.toLowerCase().includes("remote")) {
-            workType = "Remote";
-          } else if (job.category?.label.toLowerCase().includes("hybrid")) {
-            workType = "Hybrid";
-          }
+    let jobsToInsert = newJobs.filter((job) => !existingJobIds.has(job.externalId));
+    if (jobsToInsert.length > 0) {
+      await Job.insertMany(jobsToInsert);
+    }
 
-          existingJob = new Job({
-            title: job.title,
-            company: job.company?.display_name || "Unknown Company",
-            description: job.description || "No description available.",
-            location: job.location?.display_name || "Unknown Location",
-            contractType: job.contract_time
-              ? job.contract_time.replace("_", "-").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
-              : "Full-Time",
-            workType,
-            externalId: job.id,
-          });
+    let finalJobs = [...savedJobs, ...jobsToInsert];
 
-          await existingJob.save();
-        }
-        return existingJob;
-      })
-    );
-
-    // Filter data jika ada query untuk contractType atau workType
     if (contractTypeFilter) {
-      savedJobs = savedJobs.filter((job) => job.contractType === contractTypeFilter);
+      finalJobs = finalJobs.filter((job) => job.contractType === contractTypeFilter);
     }
 
     if (workTypeFilter) {
-      savedJobs = savedJobs.filter((job) => job.workType === workTypeFilter);
+      finalJobs = finalJobs.filter((job) => job.workType === workTypeFilter);
     }
 
-    // Kirim response dengan informasi pagination
     res.json({
-      jobs: savedJobs,
+      jobs: finalJobs,
       totalJobs: jobData.count,
       totalPages: Math.ceil(jobData.count / resultsPerPage),
       currentPage: page,
@@ -385,7 +374,6 @@ const getExternalJobListings = async (req, res) => {
     res.status(500).json({ message: "Error fetching jobs", error: error.message });
   }
 };
-
 
 module.exports = {
   getUserJobList,
