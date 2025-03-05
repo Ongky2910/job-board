@@ -25,18 +25,17 @@ const JobList = () => {
 
   // Debug external jobs - check if they're coming through
   const [localJobs, setLocalJobs] = useState([]);
-const [externalJobs, setExternalJobs] = useState([]);
+  const [externalJobs, setExternalJobs] = useState([]);
 
-  
   useEffect(() => {
     if (jobs && jobs.length > 0) {
       // Separate local and external jobs for debugging
-      const local = jobs.filter(job => job._id); // Assuming local jobs have _id
-      const external = jobs.filter(job => !job._id && job.id); // External jobs likely have id but not _id
-      
+      const local = jobs.filter((job) => job._id); // Assuming local jobs have _id
+      const external = jobs.filter((job) => !job._id && job.id); // External jobs likely have id but not _id
+
       console.log("Local jobs count:", local.length);
       console.log("External jobs count:", external.length);
-      
+
       setLocalJobs(local);
       setExternalJobs(external);
     }
@@ -50,7 +49,7 @@ const [externalJobs, setExternalJobs] = useState([]);
       filterType,
       contractType,
       workType,
-      currentPage
+      currentPage,
     });
     // The useJobs hook should handle the actual search
   };
@@ -72,7 +71,7 @@ const [externalJobs, setExternalJobs] = useState([]);
               placeholder="Search jobs..."
               className="px-4 py-2 border rounded-lg"
             />
-            
+
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
@@ -85,7 +84,7 @@ const [externalJobs, setExternalJobs] = useState([]);
               <option value="Contract">Contract</option>
               <option value="Internship">Internship</option>
             </select>
-            
+
             <select
               value={contractType}
               onChange={(e) => setContractType(e.target.value)}
@@ -96,7 +95,7 @@ const [externalJobs, setExternalJobs] = useState([]);
               <option value="contract">Contract</option>
               <option value="temporary">Temporary</option>
             </select>
-            
+
             <select
               value={workType}
               onChange={(e) => setWorkType(e.target.value)}
@@ -108,9 +107,9 @@ const [externalJobs, setExternalJobs] = useState([]);
               <option value="remote">Remote</option>
             </select>
           </div>
-          
+
           <div className="flex justify-center">
-            <button 
+            <button
               type="submit"
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
@@ -121,8 +120,8 @@ const [externalJobs, setExternalJobs] = useState([]);
 
         {/* Debug info for development */}
         <div className="text-sm text-gray-500 mb-4 text-center">
-          Showing {jobs?.length || 0} jobs 
-          ({localJobs?.length || 0} local, {externalJobs?.length || 0} external)
+          Showing {jobs?.length || 0} jobs ({localJobs?.length || 0} local,{" "}
+          {externalJobs?.length || 0} external)
         </div>
 
         {/* 🔹 Job List */}
@@ -151,16 +150,16 @@ const [externalJobs, setExternalJobs] = useState([]);
                     {job._id ? "Local" : "External"}
                   </span>
                 </div>
-                
+
                 <p className="text-gray-700 dark:text-gray-300">
                   {job.company || "Company not specified"}
                 </p>
-                
+
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {job.location || "Location not provided"} •{" "}
                   {job.contractType || job.contract_type || "Unknown"}
                 </p>
-                
+
                 {job.description && (
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-3">
                     {job.description}

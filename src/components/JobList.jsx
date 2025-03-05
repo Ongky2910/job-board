@@ -62,7 +62,6 @@ const JobList = () => {
             </div>
           ) : jobs && jobs.length > 0 ? (
             jobs.map((job, index) => {
-              console.log("Job Data:", job);
 
               return (
                 <motion.div

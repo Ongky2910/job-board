@@ -7,10 +7,8 @@ export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { loginUser } = useUser();
+  const { loginUser, setUser } = useUser(); // ✅ Ambil setUser dari context
   const navigate = useNavigate();
-
-  console.log("✅ useUser() return value:", loginUser);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -29,14 +27,17 @@ export default function Login() {
 
     try {
       console.log("🟢 Trying to login with:", formData);
-      await loginUser(formData.email, formData.password);
-      toast.success("✅ Login successful!", { autoClose: 1500 });
-      navigate("/dashboard");
+      const user = await loginUser(formData.email, formData.password); 
+  
+      if (user) {
+        setUser(user); // ✅ Pastikan state langsung diperbarui
+        toast.success(`✅ Welcome, ${user.displayName || user.email}!`, { autoClose: 1500 });
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error("❌ Login Error:", error);
       setError(
-        error.response?.data?.message ||
-          "Email or Password is incorrect. Please try again."
+        error.response?.data?.message || "Email or Password is incorrect. Please try again."
       );
     } finally {
       setLoading(false);

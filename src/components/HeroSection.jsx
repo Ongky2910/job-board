@@ -1,9 +1,18 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useUser } from "../context/UserContext";  // Pastikan import useUser dari context
+import { useUser } from "../context/UserContext";  
 
 export default function HeroSection() {
   const { user } = useUser();  // Ambil data pengguna dari context
+  const [displayName, setDisplayName] = useState("User");
 
+
+  useEffect(() => {
+    if (user?.name) {
+      setDisplayName(user.name);
+    }
+  }, [user]);
+  
   // Menampilkan Nama User di HeroSection
   return (
     <section className="h-screen flex flex-col items-center justify-center text-center bg-gradient-to-b from-blue-500 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white px-6">
@@ -18,25 +27,14 @@ export default function HeroSection() {
       </motion.h1>
 
       {/* Tampilkan Nama User jika ada */}
-      {user && user.name ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-4 text-xl sm:text-lg"
-        >
-          Hi, {user.name}!
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-4 text-xl sm:text-lg"
-        >
-          Hi, User!
-        </motion.div>
-      )}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.4 }}
+        className="mt-4 text-xl sm:text-lg"
+      >
+        Hi, {displayName}!
+      </motion.div>
 
       <motion.p
         initial={{ opacity: 0, y: 50 }}
@@ -47,7 +45,6 @@ export default function HeroSection() {
         Browse thousands of job listings from top companies.
       </motion.p>
 
-      {/* Tombol dengan efek hover dan responsif */}
       <motion.a
         href="/jobs"
         whileHover={{ scale: 1.1, rotate: 5 }}

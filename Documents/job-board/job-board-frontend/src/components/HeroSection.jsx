@@ -1,13 +1,14 @@
 import { motion } from "framer-motion";
-import { useUser } from "../context/UserContext";  // Pastikan import useUser dari context
+import { useEffect, useState } from "react";
+import { useUser } from "../context/UserContext";
 
 export default function HeroSection() {
-  const { user } = useUser();  // Ambil data pengguna dari context
+  const { user } = useUser();
 
-  // Menampilkan Nama User di HeroSection
+  console.log("👤 Current User in HeroSection:", user); 
+
   return (
     <section className="h-screen flex flex-col items-center justify-center text-center bg-gradient-to-b from-blue-500 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white px-6">
-      {/* Animasi Fade-in */}
       <motion.h1
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -17,26 +18,14 @@ export default function HeroSection() {
         Find Your Dream Job
       </motion.h1>
 
-      {/* Tampilkan Nama User jika ada */}
-      {user && user.name ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-4 text-xl sm:text-lg"
-        >
-          Hi, {user.name}!
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-4 text-xl sm:text-lg"
-        >
-          Hi, User!
-        </motion.div>
-      )}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.4 }}
+        className="mt-4 text-xl sm:text-lg"
+      >
+        {user ? <p>Hi, {user.displayName || user.email}!</p> : <p>Not logged in</p>}
+      </motion.div>
 
       <motion.p
         initial={{ opacity: 0, y: 50 }}
@@ -47,7 +36,6 @@ export default function HeroSection() {
         Browse thousands of job listings from top companies.
       </motion.p>
 
-      {/* Tombol dengan efek hover dan responsif */}
       <motion.a
         href="/jobs"
         whileHover={{ scale: 1.1, rotate: 5 }}

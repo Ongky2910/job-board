@@ -3,10 +3,9 @@ import axios from "axios";
 import { useUser } from "../context/UserContext";
 import _ from "lodash";
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001/api";
+const BASE_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:5001/api";
 console.log("✅ BASE_URL:", BASE_URL);
-
-
 
 const useJobs = () => {
   const { user, isUserLoading, logoutUser } = useUser();
@@ -26,9 +25,9 @@ const useJobs = () => {
 
   // Load counts from localStorage on initial render
   useEffect(() => {
-    const savedAppliedCount = localStorage.getItem('jobsAppliedCount');
-    const savedSavedCount = localStorage.getItem('jobsSavedCount');
-    
+    const savedAppliedCount = localStorage.getItem("jobsAppliedCount");
+    const savedSavedCount = localStorage.getItem("jobsSavedCount");
+
     if (savedAppliedCount) setJobsAppliedCount(parseInt(savedAppliedCount));
     if (savedSavedCount) setJobsSavedCount(parseInt(savedSavedCount));
   }, []);
@@ -36,18 +35,20 @@ const useJobs = () => {
   const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, { withCredentials: true });
+      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, {
+        withCredentials: true,
+      });
       console.log("📊 Dashboard data:", response.data);
       if (response.data?.user) {
         const appliedCount = response.data.user.appliedJobs?.length || 0;
         const savedCount = response.data.user.savedJobs?.length || 0;
-        
+
         setJobsAppliedCount(appliedCount);
         setJobsSavedCount(savedCount);
-        
+
         // Store in localStorage for persistence
-        localStorage.setItem('jobsAppliedCount', appliedCount);
-        localStorage.setItem('jobsSavedCount', savedCount);
+        localStorage.setItem("jobsAppliedCount", appliedCount);
+        localStorage.setItem("jobsSavedCount", savedCount);
       }
     } catch (error) {
       console.error("❌ Error fetching user job counts:", error);
@@ -62,42 +63,50 @@ const useJobs = () => {
   
     setIsLoading(true);
     setError(null);
-    console.log("🔄 fetchJobs dipanggil dengan user:", user);
   
     try {
-      console.log("🔍 Memulai permintaan ke API dengan params:", {
+      const params = {
         user_id: user.id,
-        search: searchTerm.trim(),
-        job_type: filterType === "All" ? "" : filterType,
-        contract_type: contractType === "All" ? "" : contractType,
-        work_type: workType === "All" ? "" : workType,
+        search: searchTerm.trim() ? searchTerm : undefined,
+        job_type: filterType && filterType !== "All" ? filterType : undefined,
+        contract_type: contractType && contractType !== "All" ? contractType : undefined,
+        work_type: workType && workType !== "All" ? workType : undefined,
         page: currentPage,
         limit: jobsPerPage,
+      };
+  
+      console.log("🔎 Params yang dikirim ke backend:", params); // Debugging
+  
+      // Hapus parameter yang `undefined`
+      Object.keys(params).forEach((key) => {
+        if (params[key] === undefined) delete params[key];
       });
+  
+      console.log("✅ Final Params (setelah filtering):", params); // Debugging
   
       const [localJobsResponse, externalJobsResponse] = await Promise.all([
         axios.get(`${BASE_URL}/jobs`, { params, withCredentials: true }),
         axios.get(`${BASE_URL}/jobs/external-jobs`, { params, withCredentials: true }),
       ]);
   
-      console.log("✅ Local Jobs Response:", localJobsResponse);
-      console.log("✅ External Jobs Response:", externalJobsResponse);
-  
       let allJobs = [
         ...(Array.isArray(localJobsResponse.data.jobs) ? localJobsResponse.data.jobs : []),
         ...(Array.isArray(externalJobsResponse.data) ? externalJobsResponse.data : []),
       ];
   
-      console.log("✅ Merged Jobs:", allJobs);
+      console.log("✅ Final Filtered Jobs:", allJobs);
+  
       setJobs(allJobs);
       setTotalPages(localJobsResponse.data.totalPages || 1);
     } catch (err) {
-      console.error("❌ Error occurred:", err);
+      console.error("❌ Error fetching jobs:", err);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [user, isUserLoading, searchTerm, filterType, contractType, workType, currentPage, logoutUser]);
+  }, [user, isUserLoading, searchTerm, filterType, contractType, workType, currentPage]);
   
+
   const debouncedFetchJobs = useRef(_.debounce(fetchJobs, 500));
 
   useEffect(() => {
@@ -105,16 +114,26 @@ const useJobs = () => {
       debouncedFetchJobs.current();
       fetchUserJobCounts();
     }
-  }, [fetchJobs, fetchUserJobCounts, isUserLoading, user]);  // Added missing dependencies
+  }, [fetchJobs, fetchUserJobCounts, isUserLoading, user]);
 
   const handleSaveJob = async (jobId) => {
     if (!user) return;
-    console.log("Saving for job:", jobId); 
+    console.log("Saving for job:", jobId);
 
     try {
-      await axios.post(`${BASE_URL}/jobs/${jobId}/save`, {}, { withCredentials: true });
-      setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isSaved: true } : job)));
-      
+      await axios.post(
+        `${BASE_URL}/jobs/${jobId}/save`,
+        {},
+        { withCredentials: true }
+      );
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.id === jobId || job._id === jobId
+            ? { ...job, isSaved: true }
+            : job
+        )
+      );
+
       if (!jobs.some((job) => job.id === jobId || job._id === jobId)) {
         setJobsSavedCount((prev) => {
           localStorage.setItem("jobsSavedCount", prev + 1);
@@ -128,16 +147,26 @@ const useJobs = () => {
 
   const handleApplyJob = async (jobId) => {
     if (!user) return;
-    console.log("Applying for job:", jobId); 
+    console.log("Applying for job:", jobId);
 
     try {
-      await axios.post(`${BASE_URL}/jobs/${jobId}/apply`, {}, { withCredentials: true });
-      setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId || job._id === jobId ? { ...job, isApplied: true } : job)));
-      
+      await axios.post(
+        `${BASE_URL}/jobs/${jobId}/apply`,
+        {},
+        { withCredentials: true }
+      );
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.id === jobId || job._id === jobId
+            ? { ...job, isApplied: true }
+            : job
+        )
+      );
+
       // Update count immediately and persist
       const newCount = jobsAppliedCount + 1;
       setJobsAppliedCount(newCount);
-      localStorage.setItem('jobsAppliedCount', newCount);
+      localStorage.setItem("jobsAppliedCount", newCount);
     } catch (error) {
       console.error("❌ Error applying for job:", error);
     }
