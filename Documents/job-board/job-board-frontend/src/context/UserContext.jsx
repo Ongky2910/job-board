@@ -16,7 +16,11 @@ export const UserProvider = ({ children }) => {
 
   // ✅ Cek autentikasi saat aplikasi pertama kali dijalankan
   useEffect(() => {
-    checkAuth();
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    checkAuth(); // Cek ulang autentikasi saat aplikasi dimulai
   }, []);
 
   // ✅ Fungsi untuk mengecek user saat pertama kali load
@@ -29,7 +33,7 @@ export const UserProvider = ({ children }) => {
 
       console.log("✅ User authenticated:", response.data);
 
-      if (response.data.user) {
+      if (response.data.user) {                                     
         setUser(response.data.user);
       } else {
         setUser(null);
@@ -43,7 +47,7 @@ export const UserProvider = ({ children }) => {
     }
     setIsUserLoading(false); // Pastikan UI tidak loading terus
   };
-
+  
   // ✅ Fungsi Login User (Langsung update user setelah login)
   const loginUser = async (email, password) => {
     try {
@@ -53,36 +57,33 @@ export const UserProvider = ({ children }) => {
         { email, password },
         { withCredentials: true }
       );
-
+  
       console.log("✅ Login Response:", response.data);
-
+  
       if (response.data.user) {
-        setUser(response.data.user); // Langsung set user state
-        await checkAuth(); // Panggil ulang checkAuth() agar data fresh
+        setUser(response.data.user);
+        localStorage.setItem("user", JSON.stringify(response.data.user)); 
         return response.data.user;
       } else {
         console.error("❌ Token tidak ditemukan dalam response!", response.data);
         setError("Invalid response from server");
         return null;
       }
+      
     } catch (error) {
       console.error("❌ Login Error:", error.response?.data || error.message);
       setError(error.response?.data?.message || "Login failed, please try again.");
       return null;
     }
   };
-
-  // ✅ Fungsi Logout User (Hapus user state setelah logout)
+  
+  
   const logoutUser = async () => {
     try {
       console.log("🚪 Logging out user...");
-      await axios.post(
-        `${API_URL}/api/auth/logout`,
-        {},
-        { withCredentials: true }
-      );
-
+      await axios.post(`${API_URL}/api/auth/logout`, {}, { withCredentials: true });
       setUser(null);
+      localStorage.removeItem("user"); 
       console.log("✅ User logged out successfully!");
       navigate("/login");
     } catch (error) {

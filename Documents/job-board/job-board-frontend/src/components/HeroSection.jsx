@@ -4,8 +4,14 @@ import { useUser } from "../context/UserContext";
 
 export default function HeroSection() {
   const { user } = useUser();
+  const [displayUser, setDisplayUser] = useState(null);
 
-  console.log("👤 Current User in HeroSection:", user); 
+  useEffect(() => {
+    console.log("👀 User in HeroSection:", user);
+    setDisplayUser(user); 
+  }, [user]);
+
+  console.log("👤 Current User in HeroSection:", displayUser);
 
   return (
     <section className="h-screen flex flex-col items-center justify-center text-center bg-gradient-to-b from-blue-500 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white px-6">
@@ -24,7 +30,7 @@ export default function HeroSection() {
         transition={{ duration: 0.8, delay: 0.4 }}
         className="mt-4 text-xl sm:text-lg"
       >
-        {user ? <p>Hi, {user.displayName || user.email}!</p> : <p>Not logged in</p>}
+        {displayUser ? <p>Hi, {displayUser.displayName || displayUser.email || "User"}!</p> : <p>Not logged in</p>}
       </motion.div>
 
       <motion.p

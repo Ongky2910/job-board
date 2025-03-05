@@ -68,36 +68,35 @@ const useJobs = () => {
       const params = {
         user_id: user.id,
         search: searchTerm.trim() ? searchTerm : undefined,
-        job_type: filterType && filterType !== "All" ? filterType : undefined,
-        contract_type: contractType && contractType !== "All" ? contractType : undefined,
-        work_type: workType && workType !== "All" ? workType : undefined,
+        job_type: filterType !== "All" ? filterType : undefined,
+        contract_type: contractType !== "All" ? contractType : undefined,
+        work_type: workType !== "All" ? workType : undefined,
         page: currentPage,
         limit: jobsPerPage,
       };
   
-      console.log("🔎 Params yang dikirim ke backend:", params); // Debugging
+      Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
   
-      // Hapus parameter yang `undefined`
-      Object.keys(params).forEach((key) => {
-        if (params[key] === undefined) delete params[key];
-      });
-  
-      console.log("✅ Final Params (setelah filtering):", params); // Debugging
+      console.log("🔎 Params yang dikirim ke backend:", params);
   
       const [localJobsResponse, externalJobsResponse] = await Promise.all([
         axios.get(`${BASE_URL}/jobs`, { params, withCredentials: true }),
         axios.get(`${BASE_URL}/jobs/external-jobs`, { params, withCredentials: true }),
       ]);
   
-      let allJobs = [
-        ...(Array.isArray(localJobsResponse.data.jobs) ? localJobsResponse.data.jobs : []),
-        ...(Array.isArray(externalJobsResponse.data) ? externalJobsResponse.data : []),
-      ];
+      let localJobs = localJobsResponse.data.jobs || [];
+      let externalJobs = Array.isArray(externalJobsResponse.data) ? externalJobsResponse.data : [];
+  
+      let allJobs = [...localJobs, ...externalJobs];
   
       console.log("✅ Final Filtered Jobs:", allJobs);
   
       setJobs(allJobs);
-      setTotalPages(localJobsResponse.data.totalPages || 1);
+  
+      // Menghitung total halaman dengan benar
+      const localTotalPages = localJobsResponse.data.totalPages || 1;
+      const externalTotalPages = externalJobsResponse.data.totalPages || 1;
+      setTotalPages(Math.max(localTotalPages, externalTotalPages));
     } catch (err) {
       console.error("❌ Error fetching jobs:", err);
       setError(err.message);
