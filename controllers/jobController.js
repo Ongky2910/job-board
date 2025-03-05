@@ -356,8 +356,8 @@ const getExternalJobListings = async (req, res) => {
     let finalJobs = [...savedJobs, ...jobsToInsert];
 
     if (contractTypeFilter) {
-      finalJobs = finalJobs.filter((job) => job.contractType === contractTypeFilter);
-    }
+      finalJobs = finalJobs.filter((job) => job.contractType?.toLowerCase() === contractTypeFilter.toLowerCase());
+  }  
 
     if (workTypeFilter) {
       finalJobs = finalJobs.filter((job) => job.workType === workTypeFilter);

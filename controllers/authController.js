@@ -5,7 +5,7 @@ const User = require("../models/User");
 // Register User
 // Register User
 const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { displayName, email, password } = req.body;
 
   console.log("Received data:", req.body);
   console.log("Received password:", password);
@@ -28,7 +28,7 @@ const registerUser = async (req, res) => {
     console.log("Hashed password:", hashedPassword);
 
     // Create new user
-    const newUser = new User({ name, email, password: hashedPassword });
+    const newUser = new User({ displayName, email, password: hashedPassword });
     await newUser.save();
 
     // Generate JWT token
@@ -81,14 +81,16 @@ const loginUser = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "None",
+      sameSite: "Lax",
     });
 
     // Kirim user data tanpa token di response body
     res.json({
       message: "Login successful",
+      token, 
       user: {
         id: user._id,
+        displayName: user.displayName, 
         email: user.email,
       },
     });
@@ -97,6 +99,31 @@ const loginUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+const verifyToken = async (req, res) => {
+  try {
+    // Ambil user dari database berdasarkan ID
+    const user = await User.findById(req.user.id).select("displayName email");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found", valid: false });
+    }
+
+    res.json({
+      user: {
+        id: user._id,
+        displayName: user.displayName, 
+        email: user.email,
+      },
+      valid: true, 
+    });
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    res.status(500).json({ message: "Server error", valid: false });
+  }
+};
+
+
 
 // Logout User
 const logoutUser = async (req, res) => {
@@ -116,4 +143,4 @@ const logoutUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, logoutUser };
+module.exports = { registerUser, loginUser, logoutUser, verifyToken };
