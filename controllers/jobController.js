@@ -327,8 +327,12 @@ const getExternalJobListings = async (req, res) => {
       return res.status(500).json({ message: "Missing API credentials" });
     }
 
-    const resultsPerPage = parseInt(req.query.results_per_page) || 50;
+    const resultsPerPage = parseInt(req.query.limit) || 6;
+
     const page = parseInt(req.query.page) || 1;
+
+    console.log("✅ Requested Page:", page);
+    console.log("✅ Results Per Page:", resultsPerPage);
 
     const apiUrl = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${app_id}&app_key=${app_key}&where=${encodeURIComponent(
       location
@@ -403,15 +407,19 @@ const getExternalJobListings = async (req, res) => {
     const filteredTotalPages = Math.ceil(totalFilteredJobs / resultsPerPage);
 
     // 🔥 Ambil data sesuai pagination
-    const paginatedJobs = finalJobs.slice(
-      (page - 1) * resultsPerPage,
-      page * resultsPerPage
-    );
+    const startIndex = (page - 1) * resultsPerPage;
+    const endIndex = startIndex + resultsPerPage;
+    const paginatedJobs = finalJobs.slice(startIndex, endIndex);
+
+    console.log("🟢 Total Jobs (Final):", finalJobs.length);
+    console.log("🟡 Start Index:", startIndex);
+    console.log("🟡 End Index:", endIndex);
+    console.log("🔵 Jobs Sent:", paginatedJobs.length);
 
     res.json({
       jobs: paginatedJobs,
       totalJobs: totalFilteredJobs,
-      totalPages: filteredTotalPages,
+      totalPages: Math.ceil(totalFilteredJobs / resultsPerPage),
       currentPage: page,
     });
   } catch (error) {
