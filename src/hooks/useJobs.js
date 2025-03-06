@@ -14,7 +14,7 @@ const useJobs = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
-  const jobsPerPage = 6;
+  const jobsPerPage = 10;
 
   const [contractType, setContractType] = useState("All");
   const [workType, setWorkType] = useState("All");
@@ -35,7 +35,7 @@ const useJobs = () => {
       contract_type: contractType === "All" ? "" : contractType,
       work_type: workType === "All" ? "" : workType,
       page: currentPage,
-      limit: jobsPerPage,
+      limit: 50,
     }),
     [user, searchTerm, filterType, contractType, workType, currentPage]
   );
