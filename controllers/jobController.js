@@ -397,19 +397,25 @@ const getExternalJobListings = async (req, res) => {
       finalJobs = finalJobs.filter((job) => job.workType === workTypeFilter);
     }
 
+    const totalFilteredJobs = finalJobs.length;
+    const totalPages = Math.ceil(totalFilteredJobs / resultsPerPage);
+
+    // 🔥 **Pagination**
+    const startIndex = (page - 1) * resultsPerPage;
+    const endIndex = startIndex + resultsPerPage;
+    const paginatedJobs = finalJobs.slice(startIndex, endIndex);
+
     console.log("🔍 Total Jobs Sebelum Filtering:", jobData.results.length);
     console.log("🔍 Total Jobs Setelah Filtering:", finalJobs.length);
     console.log("🔍 resultsPerPage:", resultsPerPage);
     console.log("🔍 totalFilteredJobs:", totalFilteredJobs);
-    console.log(
-      "🔍 totalPages dihitung:",
-      Math.ceil(totalFilteredJobs / resultsPerPage)
-    );
+    console.log("🔍 totalPages dihitung:", totalPages);
+    console.log("🔍 Jobs yang dikirim ke frontend:", paginatedJobs.length);
 
     res.json({
-      jobs: finalJobs, // Tidak perlu slice lagi
-      totalJobs: jobData.count || 0,
-      totalPages: Math.ceil((jobData.count || 0) / resultsPerPage),
+      jobs: paginatedJobs, // ✅ Sudah di-slice
+      totalJobs: totalFilteredJobs,
+      totalPages: totalPages,
       currentPage: page,
     });
   } catch (error) {
@@ -419,6 +425,7 @@ const getExternalJobListings = async (req, res) => {
       .json({ message: "Error fetching jobs", error: error.message });
   }
 };
+
 
 module.exports = {
   getUserJobList,
