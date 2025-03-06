@@ -45,28 +45,33 @@ const useJobs = () => {
       const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, {
         withCredentials: true,
       });
-      console.log("📊 Dashboard data:", response.data);
-      if (response.data?.user) {
-        setJobsAppliedCount(response.data.user.appliedJobs?.length || 0);
-        setJobsSavedCount(response.data.user.savedJobs?.length || 0);
-      }
+      setJobsAppliedCount(response.data.user.appliedJobs?.length || 0);
+      setJobsSavedCount(response.data.user.savedJobs?.length || 0);
     } catch (error) {
       console.error("❌ Error fetching user job counts:", error);
     }
-  }, [user]);
+  }, [user?.id]);
 
   // ✅ Fungsi utama untuk mengambil data pekerjaan
   const fetchJobs = useCallback(async () => {
     if (!user?.id || isUserLoading) return;
+    console.log("🔄 Fetching jobs with params:", fetchParams);
 
-    console.log("🔄 Fetching jobs...");
     setIsLoading(true);
     setError(null);
 
     try {
       const [localJobsResponse, externalJobsResponse] = await Promise.all([
-        axios.get(`${BASE_URL}/api/jobs`, { params: fetchParams, withCredentials: true }),
-        axios.get(`${BASE_URL}/api/jobs/external-jobs`, { params: fetchParams, withCredentials: true }),
+        axios.get(`${BASE_URL}/api/jobs`, { 
+          params: fetchParams, 
+          withCredentials: true,
+          headers: { Authorization: `Bearer ${user?.token}` } // Tambahkan token
+        }),
+        axios.get(`${BASE_URL}/api/jobs/external-jobs`, { 
+          params: fetchParams, 
+          withCredentials: true,
+          headers: { Authorization: `Bearer ${user?.token}` } // Tambahkan token
+        }),
       ]);
 
       let allJobs = [
@@ -74,6 +79,7 @@ const useJobs = () => {
         ...(Array.isArray(externalJobsResponse.data.jobs) ? externalJobsResponse.data.jobs : []),
       ];
 
+      console.log("✅ Jobs fetched:", allJobs.length);
       setJobs(allJobs);
       setTotalPages(localJobsResponse.data.totalPages || 1);
     } catch (err) {
@@ -86,7 +92,7 @@ const useJobs = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, isUserLoading, fetchParams]);
+  }, [user?.id, isUserLoading]); 
 
 
   // ✅ Fungsi untuk menyimpan pekerjaan (Save Job)
@@ -201,7 +207,6 @@ const useJobs = () => {
   // ✅ Atur debounce untuk fetch jobs
   useEffect(() => {
     if (!isUserLoading && user) {
-      fetchJobs(); // Panggil langsung pertama kali
       if (!debouncedFetchRef.current) {
         debouncedFetchRef.current = _.debounce(fetchJobs, 500);
       }
@@ -209,6 +214,7 @@ const useJobs = () => {
       fetchUserJobCounts();
     }
   }, [fetchJobs, fetchUserJobCounts, user, isUserLoading]);
+  
   
 
   return {

@@ -1,11 +1,19 @@
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
-import { lazy, Suspense, createContext, useState, useContext, useEffect } from "react";
+import {
+  lazy,
+  Suspense,
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+} from "react";
 import { ClipLoader } from "react-spinners";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UserProvider, useUser } from "./context/UserContext"; 
+import { UserProvider, useUser } from "./context/UserContext";
 import useJobs from "./hooks/useJobs";
+import PrivateRoute from "./components/PrivateRoute";
 
 // Lazy-loaded components
 import Navbar from "./components/Navbar";
@@ -50,23 +58,20 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-// ✅ PrivateRoute untuk halaman yang membutuhkan login
-const PrivateRoute = ({ children }) => {
-  const { user } = useUser(); 
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-};
-
 // ✅ AppContent yang menggunakan useJobs()
 const AppContent = () => {
   const { jobs, isLoading } = useJobs();
-  const location = useLocation(); 
-  const hiddenNavRoutes = ["/login", "/register"]; 
+  const location = useLocation();
+  const hiddenNavRoutes = ["/login", "/register"];
   const isNavHidden = hiddenNavRoutes.includes(location.pathname);
 
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    }
+  }, []);
+  
   return (
     <div className="bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
       <ErrorBoundary>
@@ -93,28 +98,24 @@ const AppContent = () => {
             <Route path="/logout" element={<Logout />} />
 
             {/* Private Route for Dashboard */}
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
+            {/* ✅ PrivateRoute untuk halaman yang butuh login */}
+            <Route path="/" element={<PrivateRoute />}>
+              <Route
+                path="dashboard"
+                element={
                   <ErrorBoundary>
-                    <Suspense fallback={<h1 style={{ color: "red" }}>Loading Dashboard...</h1>}>
+                    <Suspense
+                      fallback={
+                        <h1 style={{ color: "red" }}>Loading Dashboard...</h1>
+                      }
+                    >
                       <Dashboard />
                     </Suspense>
                   </ErrorBoundary>
-                </PrivateRoute>
-              }
-            />
-
-            {/* Private Route for Saved Jobs */}
-            <Route
-              path="/saved-jobs"
-              element={
-                <PrivateRoute>
-                  <SavedJobs />
-                </PrivateRoute>
-              }
-            />
+                }
+              />
+              <Route path="saved-jobs" element={<SavedJobs />} />
+            </Route>
 
             <Route path="*" element={<NotFound />} />
           </Routes>

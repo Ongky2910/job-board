@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import { toast } from "react-toastify";
@@ -11,7 +11,12 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const { loginUser } = useUser();
   const navigate = useNavigate();
+  const clearError = () => setError(null);
 
+  useEffect(() => {
+    clearError();
+  }, []);
+  
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };

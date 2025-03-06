@@ -1,24 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
 import useJobs from "../hooks/useJobs";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Trash2 } from "lucide-react";
 
+axios.defaults.withCredentials = true;
+
 export default function Dashboard() {
-  const { user } = useUser() ?? { user: null };
+  const navigate = useNavigate();
+  const { user, refreshToken } = useUser() ?? { user: null };
   const { jobs = [], setJobs = () => {} } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savedJobs, setSavedJobs] = useState([]);
-
+  const [error, setError] = useState(null);
   const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      navigate("/login");
+      return;
+    }
 
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         const [userRes, jobsRes] = await Promise.allSettled([
           axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
@@ -29,39 +36,45 @@ export default function Dashboard() {
           }),
         ]);
 
-        if (userRes.status === "fulfilled" && userRes.value.data) {
-          console.log("📌 User Data from API:", userRes.value.data);
-          const userInfo = userRes.value.data.user || {};
+        if (userRes.status === "fulfilled" && userRes.value.data?.user) {
+          const userInfo = userRes.value.data.user;
           setUserData({
-            name: userInfo.name || "N/A",
-            email: userInfo.email || "N/A",
-            jobApplied: userInfo.appliedJobs ? userInfo.appliedJobs.length : 0,
-            jobSaved: userInfo.savedJobs ? userInfo.savedJobs.length : 0,
+            name: userInfo.name ?? "N/A",
+            email: userInfo.email ?? "N/A",
+            jobApplied: userInfo.appliedJobs?.length ?? 0,
+            jobSaved: userInfo.savedJobs?.length ?? 0,
           });
+
+          // Ambil saved jobs jika ada di database
+          setSavedJobs(userInfo.savedJobs ?? []);
+        } else {
+          console.warn("User data invalid, trying to refresh token...");
+          await refreshToken();
         }
 
         if (jobsRes.status === "fulfilled" && Array.isArray(jobsRes.value.data)) {
-          console.log("✅ Jobs from API:", jobsRes.value.data);
           setJobs([...jobsRes.value.data]);
         }
-
-        // Fetch saved jobs from localStorage
-        const storedJobs = JSON.parse(localStorage.getItem("savedJobs")) || [];
-        setSavedJobs(storedJobs);
       } catch (error) {
         console.error("❌ Error fetching data:", error);
+        setError("Failed to load dashboard data. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, navigate, setJobs, refreshToken]);
 
-  const removeSavedJob = (id) => {
-    const updatedJobs = savedJobs.filter((job) => job.id !== id);
-    setSavedJobs(updatedJobs);
-    localStorage.setItem("savedJobs", JSON.stringify(updatedJobs));
+  const removeSavedJob = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/api/jobs/saved/${id}`, { withCredentials: true });
+      const updatedJobs = savedJobs.filter((job) => job.id !== id);
+      setSavedJobs(updatedJobs);
+    } catch (error) {
+      console.error("❌ Error removing saved job:", error);
+      setError("Failed to remove saved job.");
+    }
   };
 
   if (loading) {
@@ -79,6 +92,12 @@ export default function Dashboard() {
     <div className="min-h-screen bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
       <div className="container mx-auto p-8">
         <h1 className="text-3xl font-bold mb-4">Welcome, {userData.name}</h1>
+
+        {error && (
+          <div className="bg-red-500 text-white p-4 mb-4 rounded-lg">
+            <p>{error}</p>
+          </div>
+        )}
 
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4">Dashboard Overview</h2>
@@ -104,10 +123,7 @@ export default function Dashboard() {
           {Array.isArray(jobs) && jobs.length > 0 ? (
             <ul className="space-y-4">
               {jobs.map((job, index) => (
-                <li
-                  key={job.id || job._id || index}
-                  className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg"
-                >
+                <li key={job.id || job._id || index} className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold">{job.title}</h3>
                   <p>{job.company}</p>
                   <Link to={`/jobs/${job.id || job._id}`} className="text-blue-500">
@@ -129,10 +145,7 @@ export default function Dashboard() {
           ) : (
             <div className="mt-4 space-y-3">
               {savedJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="border-b p-4 rounded-lg shadow-md bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex justify-between items-center"
-                >
+                <div key={job.id} className="border-b p-4 rounded-lg shadow-md bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex justify-between items-center">
                   <Link to={`/job/${job.id}`} className="flex-1 cursor-pointer">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white hover:text-blue-600 transition">
                       {job.title}
@@ -143,18 +156,13 @@ export default function Dashboard() {
                     </p>
                   </Link>
 
-                  {/* Tombol Apply */}
                   <Link to={`/job/${job.id}?apply=true`}>
                     <button className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition">
                       Apply Now
                     </button>
                   </Link>
 
-                  {/* Tombol Hapus */}
-                  <button
-                    onClick={() => removeSavedJob(job.id)}
-                    className="text-red-500 hover:text-red-600 transition ml-3"
-                  >
+                  <button onClick={() => removeSavedJob(job.id)} className="text-red-500 hover:text-red-600 transition ml-3">
                     <Trash2 size={20} />
                   </button>
                 </div>

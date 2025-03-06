@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-
 const UserContext = createContext();
 
 export const useUser = () => useContext(UserContext);
@@ -12,87 +11,148 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [error, setError] = useState(null);
+  const clearError = () => setError(null);
 
+  const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+
+  // ✅ Fungsi Refresh Token (Memperbarui Access Token)
+  const refreshToken = async () => {
+    try {
+      console.log("🔄 Refreshing token...");
+      const response = await axios.get(`${API_URL}/api/auth/refresh-token`, {
+        withCredentials: true,
+      });
+  
+      if (response.data.token) {
+        console.log("✅ New token:", response.data.token);
+        
+        // ⬇️ Perbaikan: Set Authorization header lebih dulu
+        axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+  
+        localStorage.setItem("accessToken", response.data.token);
+        return response.data.token;
+      }
+    } catch (error) {
+      console.error("❌ Refresh token failed:", error);
+      return null;
+    }
+  };
+  
+
+  // ✅ Cek autentikasi saat pertama kali load
+  const checkAuth = async () => {
+    setIsUserLoading(true);
+    try {
+      console.log("🔍 Checking authentication...");
+      let accessToken = localStorage.getItem("accessToken");
+  
+      if (!accessToken) {
+        console.warn("⚠️ No access token found. Attempting refresh...");
+        accessToken = await refreshToken();
+      }
+  
+      if (!accessToken) {
+        console.error("❌ No valid token found, logging out...");
+        return logoutUser(); // ⬅️ Logout hanya jika refresh token gagal
+      }
+  
+      console.log("📌 Using token:", accessToken);
+      const response = await axios.get(`${API_URL}/api/auth/verify-token`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        withCredentials: true,
+      });
+  
+      console.log("✅ User authenticated:", response.data);
+      if (response.data.user) {
+        setUser(response.data.user);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        console.warn("🔄 Token expired, trying to refresh...");
+        const newAccessToken = await refreshToken();
+        if (newAccessToken) {
+          return checkAuth(); // Coba ulangi auth dengan token baru
+        }
+      }
+      console.error("❌ Authentication error:", error);
+    } finally {
+      setIsUserLoading(false);
+    }
+  };
+  
   useEffect(() => {
-    checkAuth(); // Mengecek login saat pertama kali app dijalankan
+    checkAuth();
   }, []);
-
-  const API_URL = import.meta.env.VITE_BACKEND_URL; 
 
   // ✅ Fungsi Login User
   const loginUser = async (email, password) => {
     try {
-      console.log("🟢 Sending login request...", email, password);
+      console.log("🟢 Logging in...", email);
       const response = await axios.post(
         `${API_URL}/api/auth/login`,
         { email, password },
-        { withCredentials: true } 
+        { withCredentials: true }
       );
-  
+
       console.log("✅ Login Response:", response.data);
-  
-      if (response.data.user) {  
+
+      if (response.data.user && response.data.token) {
+        console.log("🔑 Token received:", response.data.token);
+        localStorage.setItem("accessToken", response.data.token);
         setUser(response.data.user);
-        console.log("✅ Login Successful:", response.data);
-  
-        // Cek apakah ada token
-        console.log("🔑 Token dari response:", response.data.token);
-        if (!response.data.token) {
-          console.error("❌ Token tidak ditemukan dalam response!");
-        }
-  
-        navigate("/dashboard");
+        return response.data.user;
       } else {
-        console.error("❌ Invalid response from server:", response.data);
+        console.error("❌ User data not found in response!");
         setError("Invalid response from server");
-        throw new Error("Invalid response from server");
+        return null;
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Login failed, please try again.";
-
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      console.error("❌ Login Error:", error.response?.data || error.message);
+      setError(
+        error.response?.data?.message || "Login failed, please try again."
+      );
+      return null;
     }
   };
-  
 
-  // ✅ Fungsi Logout User
+  // ✅ Fungsi Logout
   const logoutUser = async () => {
     try {
-      console.log("🚪 Logging out user...");
+      console.log("🚪 Logging out...");
       await axios.post(
-       `${API_URL}/api/auth/logout`,
+        `${API_URL}/api/auth/logout`,
         {},
-        { withCredentials: true } 
+        { withCredentials: true }
       );
-      setUser(null); // Reset user state
+  
+      setUser(null);
+      localStorage.removeItem("accessToken");
+      axios.defaults.headers.common["Authorization"] = ""; // ⬅️ Pastikan token dihapus dari axios
+  
+      setIsUserLoading(false);
       console.log("✅ User logged out successfully!");
       navigate("/login");
     } catch (error) {
-      console.error("❌ Logout failed:", error.response?.data || error.message);
+      console.error("❌ Logout failed:", error);
     }
   };
-
-  // ✅ Fungsi untuk mengecek user saat pertama kali load
-  const checkAuth = async () => {
-    try {
-      console.log("🔍 Checking user authentication...");
-      const response = await axios.get(
-       `${API_URL}/api/auth/verify-token`,
-        { withCredentials: true }
-      );
-      console.log("✅ Authenticated User:", response.data.user);
-      setUser(response.data.user);
-    } catch (error) {
-      console.warn("⚠️ User not authenticated:", error.response?.data || error.message);
-      setUser(null);
-    } finally {
-      setIsUserLoading(false); 
-    }
-  };
+  
 
   return (
-    <UserContext.Provider value={{ user, setUser, loginUser, logoutUser, isUserLoading, error }}>
+    <UserContext.Provider
+      value={{
+        user,
+        setUser,
+        loginUser,
+        refreshToken,
+        logoutUser,
+        isUserLoading,
+        error,
+        clearError,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
