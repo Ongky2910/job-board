@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 // Register User
-// Register User
 const registerUser = async (req, res) => {
   const { displayName, email, password } = req.body;
 
@@ -25,7 +24,7 @@ const registerUser = async (req, res) => {
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    console.log("Hashed password:", hashedPassword);
+   
 
     // Create new user
     const newUser = new User({ displayName, email, password: hashedPassword });
@@ -38,13 +37,31 @@ const registerUser = async (req, res) => {
       { expiresIn: "1h" }
     );
 
+    const refreshToken = jwt.sign(
+      { id: newUser.id, email: newUser.email },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // ✅ Simpan token dalam HTTP-Only Cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+
     res.status(201).json({
       message: "User registered successfully",
-      token,
       user: {
         id: newUser.id,
         email: newUser.email,
-        name: newUser.name,
+        displayName: newUser.displayName,
       },
     });
   } catch (error) {
@@ -77,17 +94,28 @@ const loginUser = async (req, res) => {
       { expiresIn: "1h" }
     );
 
+    const refreshToken = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
+
     // ✅ Simpan token dalam HTTP-Only Cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      sameSite: "None",
     });
 
-    // Kirim user data tanpa token di response body
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+
     res.json({
       message: "Login successful",
-      token, 
       user: {
         id: user._id,
         displayName: user.displayName, 
@@ -102,7 +130,12 @@ const loginUser = async (req, res) => {
 
 const verifyToken = async (req, res) => {
   try {
-    // Ambil user dari database berdasarkan ID
+    // Periksa apakah token valid
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Invalid token", valid: false });
+    }
+
+    // Ambil user dari database berdasarkan ID token
     const user = await User.findById(req.user.id).select("displayName email");
 
     if (!user) {
@@ -112,10 +145,10 @@ const verifyToken = async (req, res) => {
     res.json({
       user: {
         id: user._id,
-        displayName: user.displayName, 
+        displayName: user.displayName,
         email: user.email,
       },
-      valid: true, 
+      valid: true,
     });
   } catch (error) {
     console.error("Error verifying token:", error);
@@ -124,15 +157,54 @@ const verifyToken = async (req, res) => {
 };
 
 
+const refreshToken = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken; 
+  if (!refreshToken) {
+    return res.status(401).json({ message: "No refresh token, please login again" });
+  }
+  console.log("REFRESH_TOKEN_SECRET:", process.env.REFRESH_TOKEN_SECRET);
+
+
+  try {
+    // Verifikasi refresh token
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    // Buat token baru
+    const newToken = jwt.sign(
+      { id: decoded.id, email: decoded.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" } 
+    );
+
+    // Simpan token baru ke cookie
+    res.cookie("token", newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+
+    res.json({ token: newToken });
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid or expired refresh token" });
+  }
+};
+
 
 // Logout User
 const logoutUser = async (req, res) => {
   try {
-    res.cookie("token", "", {
+    res.clearCookie("token", {
       // Kosongkan cookie
       httpOnly: true,
-      expires: new Date(0), // Atur agar langsung expired
-      sameSite: "Strict",
+      expires: new Date(0), 
+      sameSite: "None",
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      expires: new Date(0), 
+      sameSite: "None",
       secure: process.env.NODE_ENV === "production",
     });
 
@@ -143,4 +215,4 @@ const logoutUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, logoutUser, verifyToken };
+module.exports = { registerUser, loginUser, logoutUser, verifyToken, refreshToken };

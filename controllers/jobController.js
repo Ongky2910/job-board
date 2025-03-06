@@ -12,6 +12,7 @@ const getUserJobList = async (req, res) => {
     const { location, job_type, contractType, workType } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
     const filterCriteria = {
       postedBy: userId,
@@ -21,12 +22,22 @@ const getUserJobList = async (req, res) => {
       ...(workType && { workType }),
     };
 
+    // 🔥 Hitung total pekerjaan tanpa pagination
+    const totalJobs = await Job.countDocuments(filterCriteria);
+
+    // 🔥 Ambil data dengan pagination
     const dbJobs = await Job.find(filterCriteria)
       .populate("postedBy", "name email")
-      .skip((page - 1) * limit)
-      .limit(limit);
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Optimize query
 
-    res.status(200).json(dbJobs);
+    res.status(200).json({
+      jobs: dbJobs,
+      totalJobs, // 🔥 Total pekerjaan
+      totalPages: Math.ceil(totalJobs / limit), // 🔥 Total halaman
+      currentPage: page, // 🔥 Halaman saat ini
+    });
   } catch (err) {
     console.error("Error retrieving jobs:", err);
     res.status(500).json({ message: "Internal Server Error" });
@@ -281,7 +292,10 @@ const fetchJobsWithRetry = async (url, retries = 5, delay = 2000) => {
       const response = await axios.get(url);
       return response.data;
     } catch (error) {
-      if (error.response && (error.response.status === 429 || error.response.status === 503)) {
+      if (
+        error.response &&
+        (error.response.status === 429 || error.response.status === 503)
+      ) {
         console.warn(`Rate limit hit! Retrying in ${delay / 1000} seconds...`);
         await new Promise((res) => setTimeout(res, delay));
         delay *= 2;
@@ -299,7 +313,9 @@ const getExternalJobListings = async (req, res) => {
 
   try {
     const location = req.query.where || "New York";
-    const keyword = req.query.what ? `&what=${encodeURIComponent(req.query.what)}` : "";
+    const keyword = req.query.what
+      ? `&what=${encodeURIComponent(req.query.what)}`
+      : "";
     const contractTypeFilter = req.query.contractType;
     const workTypeFilter = req.query.workType;
 
@@ -314,14 +330,21 @@ const getExternalJobListings = async (req, res) => {
     const resultsPerPage = parseInt(req.query.results_per_page) || 50;
     const page = parseInt(req.query.page) || 1;
 
-    const apiUrl = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${app_id}&app_key=${app_key}&where=${encodeURIComponent(location)}${keyword}&results_per_page=${resultsPerPage}`;
+    const apiUrl = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${app_id}&app_key=${app_key}&where=${encodeURIComponent(
+      location
+    )}${keyword}&results_per_page=${resultsPerPage}`;
 
     console.log("Fetching data from:", apiUrl);
 
     const jobData = await fetchJobsWithRetry(apiUrl);
 
     if (!jobData.results || jobData.results.length === 0) {
-      return res.json({ jobs: [], totalJobs: 0, totalPages: 0, currentPage: page });
+      return res.json({
+        jobs: [],
+        totalJobs: 0,
+        totalPages: 0,
+        currentPage: page,
+      });
     }
 
     console.log(`Total Jobs Available: ${jobData.count}`);
@@ -329,26 +352,35 @@ const getExternalJobListings = async (req, res) => {
 
     let externalJobs = jobData.results;
 
-    let newJobs = externalJobs.filter((job) => job.id).map((job) => ({
-      externalId: job.id,
-      title: job.title,
-      company: job.company?.display_name || "Unknown Company",
-      description: job.description || "No description available.",
-      location: job.location?.display_name || "Unknown Location",
-      contractType: job.contract_time
-        ? job.contract_time.replace("_", "-").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
-        : "Full-Time",
-      workType: job.category?.label?.toLowerCase().includes("remote")
-        ? "Remote"
-        : job.category?.label?.toLowerCase().includes("hybrid")
-        ? "Hybrid"
-        : "Onsite",
-    }));
+    let newJobs = externalJobs
+      .filter((job) => job.id)
+      .map((job) => ({
+        externalId: job.id,
+        title: job.title,
+        company: job.company?.display_name || "Unknown Company",
+        description: job.description || "No description available.",
+        location: job.location?.display_name || "Unknown Location",
+        contractType: job.contract_time
+          ? job.contract_time
+              .replace("_", "-")
+              .toLowerCase()
+              .replace(/\b\w/g, (c) => c.toUpperCase())
+          : "Full-Time",
+        workType: job.category?.label?.toLowerCase().includes("remote")
+          ? "Remote"
+          : job.category?.label?.toLowerCase().includes("hybrid")
+          ? "Hybrid"
+          : "Onsite",
+      }));
 
-    let savedJobs = await Job.find({ externalId: { $in: newJobs.map((job) => job.externalId) } });
+    let savedJobs = await Job.find({
+      externalId: { $in: newJobs.map((job) => job.externalId) },
+    });
     let existingJobIds = new Set(savedJobs.map((job) => job.externalId));
 
-    let jobsToInsert = newJobs.filter((job) => !existingJobIds.has(job.externalId));
+    let jobsToInsert = newJobs.filter(
+      (job) => !existingJobIds.has(job.externalId)
+    );
     if (jobsToInsert.length > 0) {
       await Job.insertMany(jobsToInsert);
     }
@@ -356,22 +388,37 @@ const getExternalJobListings = async (req, res) => {
     let finalJobs = [...savedJobs, ...jobsToInsert];
 
     if (contractTypeFilter) {
-      finalJobs = finalJobs.filter((job) => job.contractType?.toLowerCase() === contractTypeFilter.toLowerCase());
-  }  
+      finalJobs = finalJobs.filter(
+        (job) =>
+          job.contractType?.toLowerCase() === contractTypeFilter.toLowerCase()
+      );
+    }
 
     if (workTypeFilter) {
       finalJobs = finalJobs.filter((job) => job.workType === workTypeFilter);
     }
 
+    const totalFilteredJobs = finalJobs.length;
+    // 🔥 Hitung ulang total halaman berdasarkan data yang sudah difilter
+    const filteredTotalPages = Math.ceil(totalFilteredJobs / resultsPerPage);
+
+    // 🔥 Ambil data sesuai pagination
+    const paginatedJobs = finalJobs.slice(
+      (page - 1) * resultsPerPage,
+      page * resultsPerPage
+    );
+
     res.json({
-      jobs: finalJobs,
-      totalJobs: jobData.count,
-      totalPages: Math.ceil(jobData.count / resultsPerPage),
+      jobs: paginatedJobs,
+      totalJobs: totalFilteredJobs,
+      totalPages: filteredTotalPages,
       currentPage: page,
     });
   } catch (error) {
     console.error("Error fetching and saving jobs:", error);
-    res.status(500).json({ message: "Error fetching jobs", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching jobs", error: error.message });
   }
 };
 
