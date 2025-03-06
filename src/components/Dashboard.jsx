@@ -29,41 +29,38 @@ export default function Dashboard() {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+    
       try {
         let accessToken = localStorage.getItem("accessToken");
-
+    
         if (!accessToken) {
           console.warn("⚠️ Token expired, trying to refresh...");
           accessToken = await refreshToken();
+    
+          if (!accessToken) {
+            console.error("❌ No valid token found, redirecting to login...");
+            navigate("/login");
+            return;
+          }
         }
-
-        if (!accessToken) {
-          console.error("❌ No valid token found, redirecting to login...");
-          navigate("/login");
-          return;
+    
+        const userRes = await axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          withCredentials: true,
+        });
+    
+        if (userRes?.data?.user) {
+          setUserData(userRes.data.user);
+          setSavedJobs(userRes.data.user.savedJobs ?? []);
         }
-
-        const [userRes, jobsRes] = await Promise.allSettled([
-          axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            withCredentials: true,
-          }),
-          axios.get(`${API_BASE_URL}/api/jobs`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            withCredentials: true,
-          }),
-        ]);
-
-        if (userRes.status === "fulfilled" && userRes.value.data?.user) {
-          setUserData(userRes.value.data.user);
-          setSavedJobs(userRes.value.data.user.savedJobs ?? []);
-        } else {
-          console.warn("User data invalid, trying to refresh token...");
-          await refreshToken();
-        }
-
-        if (jobsRes.status === "fulfilled" && Array.isArray(jobsRes.value.data)) {
-          setJobs([...jobsRes.value.data]);
+    
+        const jobsRes = await axios.get(`${API_BASE_URL}/api/jobs`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          withCredentials: true,
+        });
+    
+        if (Array.isArray(jobsRes.data)) {
+          setJobs(jobsRes.data);
         }
       } catch (error) {
         console.error("❌ Error fetching data:", error);
@@ -72,9 +69,11 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
+    
 
     fetchData();
-  }, [user?.id, isUserLoading, navigate, setJobs, refreshToken]);
+  }, [user?.id]);
+
 
   const removeSavedJob = async (id) => {
     try {
