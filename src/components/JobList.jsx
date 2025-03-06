@@ -20,6 +20,7 @@ const JobList = () => {
   } = useJobs();
 
   const filteredJobs = jobs;
+  const dummyTotalPages = 5;
 
   console.log("JobList rendered", { filteredJobs, isLoading, error });
   console.log("Fetched jobs:", jobs);
@@ -62,7 +63,6 @@ const JobList = () => {
             </div>
           ) : jobs && jobs.length > 0 ? (
             jobs.map((job, index) => {
-
               return (
                 <motion.div
                   key={job._id || job.id || index}
@@ -121,37 +121,27 @@ const JobList = () => {
 
         {/* 🔹 Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center mt-6 space-x-2">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
-            >
-              Prev
-            </button>
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`px-4 py-2 rounded ${
-                  currentPage === index + 1
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-300 text-gray-700"
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-              }
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
+         <div className="flex justify-center mt-6">
+         <button
+           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+           disabled={currentPage === 1}
+           className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+         >
+           Prev
+         </button>
+         
+         <span className="mx-4 text-lg">
+           Page {currentPage} of {totalPages}
+         </span>
+         
+         <button
+           onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+           disabled={currentPage === totalPages}
+           className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+         >
+           Next
+         </button>
+       </div>
         )}
       </div>
     </section>

@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
-import _ from "lodash";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { debounce } from "lodash";
 
 const BASE_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:5001/api";
@@ -24,19 +24,21 @@ const useJobs = () => {
   const [jobsAppliedCount, setJobsAppliedCount] = useState(0);
   const [jobsSavedCount, setJobsSavedCount] = useState(0);
   const [savedJobs, setSavedJobs] = useState([]);
-
-  const debouncedFetchRef = useRef();
+  const [totalJobs, setTotalJobs] = useState(0);
 
   // ✅ Memoization untuk parameter request agar tidak berubah setiap render
-  const fetchParams = useMemo(() => ({
-    user_id: user?.id,
-    search: searchTerm.trim(),
-    job_type: filterType === "All" ? "" : filterType,
-    contract_type: contractType === "All" ? "" : contractType,
-    work_type: workType === "All" ? "" : workType,
-    page: currentPage,
-    limit: jobsPerPage,
-  }), [user, searchTerm, filterType, contractType, workType, currentPage]);
+  const fetchParams = useMemo(
+    () => ({
+      user_id: user?.id,
+      search: searchTerm.trim(),
+      job_type: filterType === "All" ? "" : filterType,
+      contract_type: contractType === "All" ? "" : contractType,
+      work_type: workType === "All" ? "" : workType,
+      page: currentPage,
+      limit: jobsPerPage,
+    }),
+    [user, searchTerm, filterType, contractType, workType, currentPage]
+  );
 
   // ✅ Ambil jumlah pekerjaan yang telah disimpan & dilamar oleh user
   const fetchUserJobCounts = useCallback(async () => {
@@ -52,48 +54,71 @@ const useJobs = () => {
     }
   }, [user?.id]);
 
+  console.log("📢 Fetching jobs with params:", fetchParams);
+
   // ✅ Fungsi utama untuk mengambil data pekerjaan
-  const fetchJobs = useCallback(async () => {
-    if (!user?.id || isUserLoading) return;
-    console.log("🔄 Fetching jobs with params:", fetchParams);
+  const fetchJobs = useCallback(
+    debounce(async () => {
+      if (!user?.id || isUserLoading) return;
 
-    setIsLoading(true);
-    setError(null);
+      console.log("Fetching jobs with params", fetchParams);
 
-    try {
-      const [localJobsResponse, externalJobsResponse] = await Promise.all([
-        axios.get(`${BASE_URL}/api/jobs`, { 
-          params: fetchParams, 
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${user?.token}` } // Tambahkan token
-        }),
-        axios.get(`${BASE_URL}/api/jobs/external-jobs`, { 
-          params: fetchParams, 
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${user?.token}` } // Tambahkan token
-        }),
-      ]);
+      setIsLoading(true);
+      setError(null);
 
-      let allJobs = [
-        ...(Array.isArray(localJobsResponse.data.jobs) ? localJobsResponse.data.jobs : []),
-        ...(Array.isArray(externalJobsResponse.data.jobs) ? externalJobsResponse.data.jobs : []),
-      ];
+      try {
+        const [localJobsResponse, externalJobsResponse] = await Promise.all([
+          axios.get(`${BASE_URL}/api/jobs`, {
+            params: fetchParams,
+            withCredentials: true,
+            headers: { Authorization: `Bearer ${user?.token}` },
+          }),
+          axios.get(`${BASE_URL}/api/jobs/external-jobs`, {
+            params: fetchParams,
+            withCredentials: true,
+            headers: { Authorization: `Bearer ${user?.token}` },
+          }),
+        ]);
 
-      console.log("✅ Jobs fetched:", allJobs.length);
-      setJobs(allJobs);
-      setTotalPages(localJobsResponse.data.totalPages || 1);
-    } catch (err) {
-      console.error("❌ Error fetching jobs:", err);
-      if (err.response?.status === 401) {
-        logoutUser();
-      } else {
-        setError(err.response?.data?.message || "Failed to fetch jobs.");
+        console.log(
+          "📦 API Response - Local Jobs:",
+          localJobsResponse.data.jobs.length
+        );
+        console.log(
+          "📦 API Response - External Jobs:",
+          externalJobsResponse.data.jobs.length
+        );
+
+        const totalLocalJobs = localJobsResponse.data.totalJobs || 0;
+        const totalExternalJobs = externalJobsResponse.data.totalJobs || 0;
+        const totalJobsCount = totalLocalJobs + totalExternalJobs;
+
+        let allJobs = [
+          ...(Array.isArray(localJobsResponse.data.jobs)
+            ? localJobsResponse.data.jobs
+            : []),
+          ...(Array.isArray(externalJobsResponse.data.jobs)
+            ? externalJobsResponse.data.jobs
+            : []),
+        ];
+
+        console.log("✅ Jobs fetched:", allJobs.length);
+        console.log("📊 Total Jobs:", totalJobsCount);
+
+        // Update state dengan data yang benar
+        setJobs(allJobs);
+        setTotalJobs(totalJobsCount);
+        setTotalPages(Math.ceil(totalJobsCount / jobsPerPage));
+      } catch (err) {
+        console.error("❌ Error fetching jobs:", err);
+        if (err.response?.status === 401) logoutUser();
+        else setError(err.response?.data?.message || "Failed to fetch jobs.");
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, isUserLoading]); 
-
+    }, 300),
+    [user?.id, isUserLoading, logoutUser, fetchParams]
+  );
 
   // ✅ Fungsi untuk menyimpan pekerjaan (Save Job)
   const handleSaveJob = async (jobId) => {
@@ -205,17 +230,15 @@ const useJobs = () => {
   };
 
   // ✅ Atur debounce untuk fetch jobs
+
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (!debouncedFetchRef.current) {
-        debouncedFetchRef.current = _.debounce(fetchJobs, 500);
-      }
-      debouncedFetchRef.current(); 
+      fetchJobs();
       fetchUserJobCounts();
     }
-  }, [fetchJobs, fetchUserJobCounts, user, isUserLoading]);
-  
-  
+  }, [fetchParams, isUserLoading, fetchUserJobCounts, fetchJobs]);
+
+  console.log("🔄 Total Pages:", totalPages);
 
   return {
     jobs,
