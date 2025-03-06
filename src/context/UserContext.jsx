@@ -83,10 +83,12 @@ export const UserProvider = ({ children }) => {
   };
   
   useEffect(() => {
-    checkAuth();
+    setTimeout(() => {
+      checkAuth();
+    }, 1000); 
   }, []);
+  
 
-  // ✅ Fungsi Login User
   const loginUser = async (email, password) => {
     try {
       console.log("🟢 Logging in...", email);
@@ -95,12 +97,16 @@ export const UserProvider = ({ children }) => {
         { email, password },
         { withCredentials: true }
       );
-
+  
       console.log("✅ Login Response:", response.data);
-
+  
       if (response.data.user && response.data.token) {
         console.log("🔑 Token received:", response.data.token);
         localStorage.setItem("accessToken", response.data.token);
+        
+        // Cek apakah token benar-benar tersimpan
+        console.log("📌 Token saved in localStorage:", localStorage.getItem("accessToken"));
+  
         setUser(response.data.user);
         return response.data.user;
       } else {
@@ -110,9 +116,7 @@ export const UserProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("❌ Login Error:", error.response?.data || error.message);
-      setError(
-        error.response?.data?.message || "Login failed, please try again."
-      );
+      setError(error.response?.data?.message || "Login failed, please try again.");
       return null;
     }
   };
@@ -121,6 +125,8 @@ export const UserProvider = ({ children }) => {
   const logoutUser = async () => {
     try {
       console.log("🚪 Logging out...");
+      console.log("⛔ Current token before logout:", localStorage.getItem("accessToken"));
+  
       await axios.post(
         `${API_URL}/api/auth/logout`,
         {},
@@ -129,10 +135,12 @@ export const UserProvider = ({ children }) => {
   
       setUser(null);
       localStorage.removeItem("accessToken");
-      axios.defaults.headers.common["Authorization"] = ""; // ⬅️ Pastikan token dihapus dari axios
+      axios.defaults.headers.common["Authorization"] = "";
+  
+      console.log("✅ User logged out successfully!");
+      console.log("🗑️ Token after logout:", localStorage.getItem("accessToken")); // Seharusnya null
   
       setIsUserLoading(false);
-      console.log("✅ User logged out successfully!");
       navigate("/login");
     } catch (error) {
       console.error("❌ Logout failed:", error);

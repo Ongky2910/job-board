@@ -14,6 +14,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { UserProvider, useUser } from "./context/UserContext";
 import useJobs from "./hooks/useJobs";
 import PrivateRoute from "./components/PrivateRoute";
+import axios from "axios";
 
 // Lazy-loaded components
 import Navbar from "./components/Navbar";
@@ -71,7 +72,7 @@ const AppContent = () => {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
   }, []);
-  
+
   return (
     <div className="bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
       <ErrorBoundary>

@@ -9,7 +9,7 @@ axios.defaults.withCredentials = true;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, refreshToken } = useUser() ?? { user: null };
+  const { user, refreshToken, isLoading: isUserLoading } = useUser() ?? { user: null, isLoading: true };
   const { jobs = [], setJobs = () => {} } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,10 @@ export default function Dashboard() {
   const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
+    if (isUserLoading) return;
+
     if (!user?.id) {
+      console.warn("🔴 No user found, redirecting to login...");
       navigate("/login");
       return;
     }
@@ -27,26 +30,33 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
       try {
+        let accessToken = localStorage.getItem("accessToken");
+
+        if (!accessToken) {
+          console.warn("⚠️ Token expired, trying to refresh...");
+          accessToken = await refreshToken();
+        }
+
+        if (!accessToken) {
+          console.error("❌ No valid token found, redirecting to login...");
+          navigate("/login");
+          return;
+        }
+
         const [userRes, jobsRes] = await Promise.allSettled([
           axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
             withCredentials: true,
           }),
           axios.get(`${API_BASE_URL}/api/jobs`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
             withCredentials: true,
           }),
         ]);
 
         if (userRes.status === "fulfilled" && userRes.value.data?.user) {
-          const userInfo = userRes.value.data.user;
-          setUserData({
-            name: userInfo.name ?? "N/A",
-            email: userInfo.email ?? "N/A",
-            jobApplied: userInfo.appliedJobs?.length ?? 0,
-            jobSaved: userInfo.savedJobs?.length ?? 0,
-          });
-
-          // Ambil saved jobs jika ada di database
-          setSavedJobs(userInfo.savedJobs ?? []);
+          setUserData(userRes.value.data.user);
+          setSavedJobs(userRes.value.data.user.savedJobs ?? []);
         } else {
           console.warn("User data invalid, trying to refresh token...");
           await refreshToken();
@@ -64,7 +74,7 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [user?.id, navigate, setJobs, refreshToken]);
+  }, [user?.id, isUserLoading, navigate, setJobs, refreshToken]);
 
   const removeSavedJob = async (id) => {
     try {
@@ -151,15 +161,6 @@ export default function Dashboard() {
                       {job.title}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-300">{job.company}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {job.location} • {job.type}
-                    </p>
-                  </Link>
-
-                  <Link to={`/job/${job.id}?apply=true`}>
-                    <button className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition">
-                      Apply Now
-                    </button>
                   </Link>
 
                   <button onClick={() => removeSavedJob(job.id)} className="text-red-500 hover:text-red-600 transition ml-3">
