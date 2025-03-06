@@ -328,7 +328,6 @@ const getExternalJobListings = async (req, res) => {
     }
 
     const resultsPerPage = parseInt(req.query.limit) || 6;
-
     const page = parseInt(req.query.page) || 1;
 
     console.log("✅ Requested Page:", page);
@@ -345,8 +344,8 @@ const getExternalJobListings = async (req, res) => {
     if (!jobData.results || jobData.results.length === 0) {
       return res.json({
         jobs: [],
-        totalJobs: 0,
-        totalPages: 0,
+        totalJobs: jobData.count || 0,
+        totalPages: Math.ceil((jobData.count || 0) / resultsPerPage),
         currentPage: page,
       });
     }
@@ -354,28 +353,24 @@ const getExternalJobListings = async (req, res) => {
     console.log(`Total Jobs Available: ${jobData.count}`);
     console.log(`Jobs Fetched: ${jobData.results.length}`);
 
-    let externalJobs = jobData.results;
-
-    let newJobs = externalJobs
-      .filter((job) => job.id)
-      .map((job) => ({
-        externalId: job.id,
-        title: job.title,
-        company: job.company?.display_name || "Unknown Company",
-        description: job.description || "No description available.",
-        location: job.location?.display_name || "Unknown Location",
-        contractType: job.contract_time
-          ? job.contract_time
-              .replace("_", "-")
-              .toLowerCase()
-              .replace(/\b\w/g, (c) => c.toUpperCase())
-          : "Full-Time",
-        workType: job.category?.label?.toLowerCase().includes("remote")
-          ? "Remote"
-          : job.category?.label?.toLowerCase().includes("hybrid")
-          ? "Hybrid"
-          : "Onsite",
-      }));
+    let newJobs = jobData.results.map((job) => ({
+      externalId: job.id,
+      title: job.title,
+      company: job.company?.display_name || "Unknown Company",
+      description: job.description || "No description available.",
+      location: job.location?.display_name || "Unknown Location",
+      contractType: job.contract_time
+        ? job.contract_time
+            .replace("_", "-")
+            .toLowerCase()
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+        : "Full-Time",
+      workType: job.category?.label?.toLowerCase().includes("remote")
+        ? "Remote"
+        : job.category?.label?.toLowerCase().includes("hybrid")
+        ? "Hybrid"
+        : "Onsite",
+    }));
 
     let savedJobs = await Job.find({
       externalId: { $in: newJobs.map((job) => job.externalId) },
@@ -402,24 +397,19 @@ const getExternalJobListings = async (req, res) => {
       finalJobs = finalJobs.filter((job) => job.workType === workTypeFilter);
     }
 
-    const totalFilteredJobs = finalJobs.length;
-    // 🔥 Hitung ulang total halaman berdasarkan data yang sudah difilter
-    const filteredTotalPages = Math.ceil(totalFilteredJobs / resultsPerPage);
-
-    // 🔥 Ambil data sesuai pagination
-    const startIndex = (page - 1) * resultsPerPage;
-    const endIndex = startIndex + resultsPerPage;
-    const paginatedJobs = finalJobs.slice(startIndex, endIndex);
-
-    console.log("🟢 Total Jobs (Final):", finalJobs.length);
-    console.log("🟡 Start Index:", startIndex);
-    console.log("🟡 End Index:", endIndex);
-    console.log("🔵 Jobs Sent:", paginatedJobs.length);
+    console.log("🔍 Total Jobs Sebelum Filtering:", jobData.results.length);
+    console.log("🔍 Total Jobs Setelah Filtering:", finalJobs.length);
+    console.log("🔍 resultsPerPage:", resultsPerPage);
+    console.log("🔍 totalFilteredJobs:", totalFilteredJobs);
+    console.log(
+      "🔍 totalPages dihitung:",
+      Math.ceil(totalFilteredJobs / resultsPerPage)
+    );
 
     res.json({
-      jobs: paginatedJobs,
-      totalJobs: totalFilteredJobs,
-      totalPages: Math.ceil(totalFilteredJobs / resultsPerPage),
+      jobs: finalJobs, // Tidak perlu slice lagi
+      totalJobs: jobData.count || 0,
+      totalPages: Math.ceil((jobData.count || 0) / resultsPerPage),
       currentPage: page,
     });
   } catch (error) {
