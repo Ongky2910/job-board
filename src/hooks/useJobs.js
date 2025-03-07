@@ -30,10 +30,10 @@ const useJobs = () => {
   const fetchParams = useMemo(
     () => ({
       user_id: user?.id,
-      search: searchTerm.trim(),
-      job_type: filterType === "All" ? "" : filterType,
-      contract_type: contractType === "All" ? "" : contractType,
-      work_type: workType === "All" ? "" : workType,
+      search: searchTerm.trim() || undefined, 
+      job_type: filterType !== "All" ? filterType : undefined, 
+      contract_type: contractType !== "All" ? contractType : undefined,
+      work_type: workType !== "All" ? workType : undefined,
       page: currentPage,
       limit: 50,
     }),
@@ -66,15 +66,27 @@ const useJobs = () => {
       setIsLoading(true);
       setError(null);
 
+      // Bersihkan params sebelum request
+
+      const cleanedParams = { ...fetchParams };
+      Object.keys(cleanedParams).forEach((key) => {
+        if (cleanedParams[key] === undefined || cleanedParams[key] === null) {
+          delete cleanedParams[key];
+        }
+      });
+
+      console.log("Final Filter Params", cleanedParams);
+      
+
       try {
         const [localJobsResponse, externalJobsResponse] = await Promise.all([
           axios.get(`${BASE_URL}/api/jobs`, {
-            params: fetchParams,
+            params: cleanedParams, 
             withCredentials: true,
             headers: { Authorization: `Bearer ${user?.token}` },
           }),
           axios.get(`${BASE_URL}/api/jobs/external-jobs`, {
-            params: fetchParams,
+            params: cleanedParams, 
             withCredentials: true,
             headers: { Authorization: `Bearer ${user?.token}` },
           }),
@@ -82,11 +94,11 @@ const useJobs = () => {
 
         console.log(
           "📦 API Response - Local Jobs:",
-          localJobsResponse.data.jobs.length
+          localJobsResponse.data
         );
         console.log(
           "📦 API Response - External Jobs:",
-          externalJobsResponse.data.jobs.length
+          externalJobsResponse.data
         );
 
         const totalLocalJobs = localJobsResponse.data.totalJobs || 0;
@@ -108,15 +120,18 @@ const useJobs = () => {
             : []),
         ];
 
-        console.log("✅ Jobs fetched:", allJobs.length);
-        console.log("📊 Total Jobs:", totalJobsCount);
+        console.log("🔄 Update state dengan jobs:", allJobs);
 
         // Update state dengan data yang benar
         setJobs(allJobs);
         setTotalJobs(totalJobsCount);
 
-        setTotalPages(Math.ceil(totalJobsCount / jobsPerPage));
-        console.log("🔄 Total Pages:", totalPages);
+      // ✅ Pastikan total halaman dihitung ulang setiap update
+      const calculatedTotalPages = Math.ceil(totalJobsCount / jobsPerPage);
+      setTotalPages(calculatedTotalPages);
+      
+      console.log("✅ Total Jobs:", totalJobsCount);
+      console.log("📄 Total Pages:", calculatedTotalPages);
       } catch (err) {
         console.error("❌ Error fetching jobs:", err);
         if (err.response?.status === 401) logoutUser();
@@ -267,6 +282,7 @@ const useJobs = () => {
     handleApplyJob,
     jobsAppliedCount,
     jobsSavedCount,
+    fetchJobs,
   };
 };
 
