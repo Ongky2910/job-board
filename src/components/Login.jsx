@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import { toast } from "react-toastify";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Menu, Briefcase } from "lucide-react";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -16,7 +16,7 @@ export default function Login() {
   useEffect(() => {
     clearError();
   }, []);
-  
+
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -49,7 +49,7 @@ export default function Login() {
       setLoading(false);
     }
   };
-  
+
   const handleForgotPassword = () => {
     if (!formData.email) {
       toast.warning("Please enter your email first!", { autoClose: 2000 });
@@ -64,6 +64,9 @@ export default function Login() {
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700">
+        <div className="flex justify-center mb-0">
+          <Briefcase size={28} />
+        </div>
         <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
           Login
         </h2>
@@ -76,7 +79,7 @@ export default function Login() {
               placeholder="Email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -101,7 +104,7 @@ export default function Login() {
           <div className="flex justify-between items-center">
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition duration-300"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105"
               disabled={loading}
             >
               {loading ? "Logging In..." : "Login"}
