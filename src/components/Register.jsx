@@ -9,11 +9,13 @@ export default function Register() {
     displayName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [user, setUser] = useState(null); // Tambahkan state user
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
+  const [user, setUser] = useState(null); 
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -23,10 +25,17 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(""); // Reset error sebelum submit
+    setError(""); 
 
-    if (!formData.displayName || !formData.email || !formData.password) {
+    if (!formData.displayName || !formData.email || !formData.password || !formData.confirmPassword) {
       setError("Please fill in all fields");
+      setLoading(false);
+      return;
+    }
+
+     // Validasi jika password dan confirm password cocok
+     if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
       setLoading(false);
       return;
     }
@@ -114,7 +123,24 @@ export default function Register() {
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
-
+<div className="relative">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+              required
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-3 flex items-center bg-transparent dark:bg-transparent text-gray-500 dark:text-gray-400"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
           <button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition duration-300"
@@ -125,7 +151,7 @@ export default function Register() {
         </form>
         <p className="mt-4 text-center">
           Already have an account?{" "}
-          <a href="/login" className="text-blue-600">
+          <a href="/login" className="text-blue-600 hover:underline">
             Login
           </a>
         </p>

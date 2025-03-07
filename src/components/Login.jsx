@@ -65,7 +65,7 @@ export default function Login() {
     <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700">
         <div className="flex justify-center mb-0">
-          <Briefcase size={28} />
+          <Briefcase size={25} />
         </div>
         <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
           Login

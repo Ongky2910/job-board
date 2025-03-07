@@ -43,31 +43,25 @@ export default function Navbar() {
 
         {/* Menu untuk device besar */}
         <div className="hidden md:flex space-x-8 items-center">
-          {user ? (
+          {/* Menu yang selalu ada untuk semua pengguna */}
+          <Link to="/" className="hover:text-blue-300 font-bold">
+            Home
+          </Link>
+          <Link to="/jobs" className="hover:text-blue-300 font-bold">
+            Jobs
+          </Link>
+          <Link to="/contact" className="hover:text-blue-300 font-bold">
+            Contact
+          </Link>
+
+          {/* Menu untuk pengguna yang sudah login */}
+          {user && (
             <>
               <Link to="/dashboard" className="hover:text-blue-300 font-bold">
                 Dashboard
               </Link>
-              <Link
-                to="/edit-profile"
-                className="hover:text-blue-300 font-bold"
-              >
+              <Link to="/edit-profile" className="hover:text-blue-300 font-bold">
                 Edit Profile
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link to="/" className="hover:text-blue-300 font-bold">
-                Home
-              </Link>
-              <Link to="/jobs" className="hover:text-blue-300 font-bold">
-                Jobs
-              </Link>
-              <Link to="/saved-jobs" className="hover:text-blue-300 font-bold">
-                Saved Jobs
-              </Link>
-              <Link to="/contact" className="hover:text-blue-300 font-bold">
-                Contact
               </Link>
             </>
           )}
@@ -138,10 +132,11 @@ export default function Navbar() {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
           className="md:hidden bg-blue-700 dark:bg-blue-900 text-white p-4 mt-2 rounded-lg shadow-lg"
-          onClick={(e) => e.stopPropagation()} 
+          onClick={(e) => e.stopPropagation()}
         >
           <ul className="flex flex-col space-y-4">
-            {["Home", "Jobs", "Saved Jobs", "Contact"].map((item, index) => (
+            {/* Menu yang selalu ada untuk semua pengguna */}
+            {["Home", "Jobs", "Contact"].map((item, index) => (
               <motion.li
                 key={item.toLowerCase()}
                 whileHover={{ scale: 1.05 }}
@@ -157,6 +152,7 @@ export default function Navbar() {
               </motion.li>
             ))}
 
+            {/* Menu untuk pengguna yang sudah login */}
             {user && (
               <>
                 <motion.li
