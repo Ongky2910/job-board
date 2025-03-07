@@ -5,7 +5,15 @@ const asyncHandler = require("express-async-handler");
 // Fungsi untuk mendapatkan dashboard pengguna
 const getUserDashboard = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const user = await User.findById(userId).populate("savedJobs");
+  const user = await User.findById(userId)
+    .populate({
+      path: "savedJobs",
+      match: { deleted: false } // Filter pekerjaan yang dihapus
+    })
+    .populate({
+      path: "appliedJobs",
+      match: { deleted: false } // Filter pekerjaan yang dihapus
+    });
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -14,7 +22,6 @@ const getUserDashboard = asyncHandler(async (req, res) => {
   const appliedJobs = await Job.find({ appliedBy: userId }).countDocuments();
   console.log("Applied Jobs Count:", appliedJobs);
 
-  // Ambil jumlah pekerjaan yang disimpan (jika ada fitur bookmark)
   const savedJobs = user.savedJobs || [];
 
   return res.status(200).json({
@@ -28,6 +35,7 @@ const getUserDashboard = asyncHandler(async (req, res) => {
     },
   });
 });
+
 
 // Fungsi untuk mendapatkan daftar pekerjaan yang diposting oleh user
 const getUserJobList = asyncHandler(async (req, res) => {

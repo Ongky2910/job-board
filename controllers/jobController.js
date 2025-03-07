@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Job = require("../models/Job");
+const asyncHandler = require("express-async-handler");
 
 // ✅ Mendapatkan daftar pekerjaan yang diposting oleh pengguna
 const getUserJobList = async (req, res) => {
@@ -190,35 +191,44 @@ const restoreJob = async (req, res) => {
 };
 
 // ✅ Melamar pekerjaan
-const applyJob = async (req, res) => {
+const applyJob = asyncHandler(async (req, res) => {
   try {
-    const { id } = req.params;
     const userId = req.user.id;
+    const jobId = req.params.id;
 
-    const job = await Job.findById(id);
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
+    // Cari user dan job berdasarkan id
+    const user = await User.findById(userId);
+    const job = await Job.findById(jobId);
+
+    // Jika user atau job tidak ditemukan, kirimkan pesan error 404
+    if (!user || !job) {
+      return res.status(404).json({ message: "User or Job not found" });
     }
 
-    // Cek apakah user sudah apply sebelumnya
+    // Cek jika user sudah melamar pekerjaan ini
     if (job.appliedUsers.includes(userId)) {
-      return res
-        .status(400)
-        .json({ message: "You have already applied for this job" });
+      return res.status(400).json({ message: "You have already applied for this job" });
     }
 
-    // Tambahkan user ke appliedUsers dan naikkan applyCount
-    await Job.findByIdAndUpdate(id, {
-      $addToSet: { appliedUsers: userId },
-      $inc: { applyCount: 1 },
-    });
+    // Menambahkan pekerjaan ke appliedUsers jika belum ada
+    job.appliedUsers.push(userId);
+    user.appliedJobs.push(jobId);
+    job.applyCount += 1;
 
-    res.json({ message: "Job applied successfully" });
+    // Simpan perubahan ke database
+    await job.save();
+    await user.save();
+
+    // Kirimkan respon sukses
+    return res.status(200).json({ message: "Job applied successfully" });
   } catch (error) {
-    console.error(error);
+    console.error(error);  // Log error ke console untuk debugging
+
+    // Kirimkan error internal server jika terjadi kesalahan lainnya
     res.status(500).json({ message: "Internal server error" });
   }
-};
+});
+
 
 // ✅ Mendapatkan pekerjaan yang telah dilamar
 const getAppliedJobs = async (req, res) => {
@@ -239,51 +249,68 @@ const getAppliedJobs = async (req, res) => {
 };
 
 // ✅ Menyimpan pekerjaan ke daftar favorit
-const saveJob = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
+const saveJob = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
 
+  try {
+    // Cari pekerjaan dan pengguna berdasarkan ID
     const job = await Job.findById(id);
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
+    const user = await User.findById(userId);
+
+    // Validasi: Pastikan pekerjaan dan pengguna ada
+    if (!job || !user) {
+      return res.status(404).json({ message: "User or Job not found" });
     }
 
-    // Jika user sudah menyimpan, hapus dari savedUsers
+    // Jika pekerjaan sudah disimpan oleh pengguna, hapus dari savedUsers dan kurangi saveCount
     if (job.savedUsers.includes(userId)) {
       await Job.findByIdAndUpdate(id, {
         $pull: { savedUsers: userId },
-        $inc: { saveCount: -1 }, // ✅ Kurangi saveCount
+        $inc: { saveCount: -1 },
       });
+
+      await User.findByIdAndUpdate(userId, {
+        $pull: { savedJobs: id }
+      });
+
       return res.json({ message: "Job unsaved successfully" });
     }
 
-    // Jika belum, tambahkan user ke savedUsers
+    // Jika pekerjaan belum disimpan, tambahkan pekerjaan ke daftar savedUsers dan tambahkan saveCount
     await Job.findByIdAndUpdate(id, {
-      $addToSet: { savedUsers: userId },
+      $addToSet: { savedUsers: userId },  // Menggunakan $addToSet agar tidak ada duplikat
       $inc: { saveCount: 1 },
     });
 
-    res.json({ message: "Job saved successfully" });
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { savedJobs: id }
+    });
+
+    return res.json({ message: "Job saved successfully" });
+
   } catch (error) {
-    console.error(error);
+    // Log error ke console
+    console.error("Error in saveJob:", error);
     res.status(500).json({ message: "Internal server error" });
   }
-};
+});
+
 
 // ✅ Mendapatkan daftar pekerjaan yang disimpan
 const getSavedJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ savedUsers: req.user.id }).populate(
-      "postedBy",
-      "name email"
-    );
+    const jobs = await Job.find({ savedUsers: req.user.id })
+      .populate("postedBy", "name email")
+      .lean(); 
+
     res.status(200).json(jobs);
   } catch (err) {
     console.error("Error retrieving saved jobs:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 // Fungsi untuk mengambil data dengan retry jika gagal dengan exponential backoff
 const fetchJobsWithRetry = async (url, retries = 5, delay = 2000) => {
