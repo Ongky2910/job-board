@@ -33,8 +33,9 @@ export default function Login() {
     }
 
     try {
+      // Pastikan data dikirim dengan benar sesuai dengan API backend
       await loginUser(formData.email, formData.password);
-      toast.success(" Login successful!", { autoClose: 1500 });
+      toast.success("Login successful!", { autoClose: 1500 });
       navigate("/");
     } catch (error) {
       console.error("❌ Login Error:", error.response?.data || error.message);

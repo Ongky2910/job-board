@@ -3,16 +3,39 @@ import { motion } from "framer-motion";
 import { useUser } from "../context/UserContext";  
 
 export default function HeroSection() {
-  const { user } = useUser();  // Ambil data pengguna dari context
+  const { user, isUserLoading } = useUser();  // Ambil data pengguna dari context
   const [displayName, setDisplayName] = useState("User");
 
 
   useEffect(() => {
+    console.log("User data:", user); // Cek data user
+    console.log("User name:", user?.name); // Cek apakah user.name ada
+  
     if (user?.name) {
-      setDisplayName(user.name);
+      setDisplayName(user.name); // Jika ada nama, gunakan nama
+    } else if (user?.email) {
+      const nameFromEmail = user.email.split('@')[0];
+      console.log("Name from email:", nameFromEmail); // Debug nama dari email
+      setDisplayName(nameFromEmail); // Jika tidak ada nama, gunakan email
     }
   }, [user]);
   
+  
+  if (isUserLoading) {
+    return (
+      <section className="h-screen flex flex-col items-center justify-center text-center bg-gradient-to-b from-blue-500 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white px-6">
+        <motion.h1
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-5xl font-bold sm:text-4xl md:text-5xl lg:text-6xl"
+        >
+          Loading...
+        </motion.h1>
+      </section>
+    );
+  }
+
   // Menampilkan Nama User di HeroSection
   return (
     <section className="h-screen flex flex-col items-center justify-center text-center bg-gradient-to-b from-blue-500 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white px-6">

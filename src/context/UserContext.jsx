@@ -73,7 +73,7 @@ export const UserProvider = ({ children }) => {
         console.warn("🔄 Token expired, trying to refresh...");
         const newAccessToken = await refreshToken();
         if (newAccessToken) {
-          return checkAuth(); // Coba ulangi auth dengan token baru
+          return checkAuth(); 
         }
       }
       console.error("❌ Authentication error:", error);
@@ -83,9 +83,11 @@ export const UserProvider = ({ children }) => {
   };
   
   useEffect(() => {
-    setTimeout(() => {
-      checkAuth();
-    }, 1000); 
+    if (window.location.pathname !== "/register" && window.location.pathname !== "/login") {
+      setTimeout(() => {
+        checkAuth();
+      }, 1000); 
+    }
   }, []);
   
 

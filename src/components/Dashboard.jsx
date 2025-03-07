@@ -9,13 +9,18 @@ axios.defaults.withCredentials = true;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, refreshToken, isLoading: isUserLoading } = useUser() ?? { user: null, isLoading: true };
+  const {
+    user,
+    refreshToken,
+    isLoading: isUserLoading,
+  } = useUser() ?? { user: null, isLoading: true };
   const { jobs = [], setJobs = () => {} } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savedJobs, setSavedJobs] = useState([]);
   const [error, setError] = useState(null);
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+  const API_BASE_URL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
     if (isUserLoading) return;
@@ -29,36 +34,36 @@ export default function Dashboard() {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-    
+
       try {
         let accessToken = localStorage.getItem("accessToken");
-    
+
         if (!accessToken) {
           console.warn("⚠️ Token expired, trying to refresh...");
           accessToken = await refreshToken();
-    
+
           if (!accessToken) {
             console.error("❌ No valid token found, redirecting to login...");
             navigate("/login");
             return;
           }
         }
-    
+
         const userRes = await axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           withCredentials: true,
         });
-    
+
         if (userRes?.data?.user) {
           setUserData(userRes.data.user);
           setSavedJobs(userRes.data.user.savedJobs ?? []);
         }
-    
+
         const jobsRes = await axios.get(`${API_BASE_URL}/api/jobs`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           withCredentials: true,
         });
-    
+
         if (Array.isArray(jobsRes.data)) {
           setJobs(jobsRes.data);
         }
@@ -69,15 +74,15 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-    
 
     fetchData();
   }, [user?.id]);
 
-
   const removeSavedJob = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/jobs/saved/${id}`, { withCredentials: true });
+      await axios.delete(`${API_BASE_URL}/api/jobs/saved/${id}`, {
+        withCredentials: true,
+      });
       const updatedJobs = savedJobs.filter((job) => job.id !== id);
       setSavedJobs(updatedJobs);
     } catch (error) {
@@ -90,7 +95,9 @@ export default function Dashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
-        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">
+          Loading dashboard...
+        </p>
       </div>
     );
   }
@@ -100,7 +107,9 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
       <div className="container mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-4">Welcome, {userData.name}</h1>
+        <h1 className="text-3xl font-bold mb-4">
+          Welcome back, {userData.name ? `${userData.name}! 🚀` : "Guest! 🚀"}
+        </h1>
 
         {error && (
           <div className="bg-red-500 text-white p-4 mb-4 rounded-lg">
@@ -132,10 +141,16 @@ export default function Dashboard() {
           {Array.isArray(jobs) && jobs.length > 0 ? (
             <ul className="space-y-4">
               {jobs.map((job, index) => (
-                <li key={job.id || job._id || index} className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                <li
+                  key={job.id || job._id || index}
+                  className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg"
+                >
                   <h3 className="text-lg font-semibold">{job.title}</h3>
                   <p>{job.company}</p>
-                  <Link to={`/jobs/${job.id || job._id}`} className="text-blue-500">
+                  <Link
+                    to={`/jobs/${job.id || job._id}`}
+                    className="text-blue-500"
+                  >
                     View Job
                   </Link>
                 </li>
@@ -154,15 +169,23 @@ export default function Dashboard() {
           ) : (
             <div className="mt-4 space-y-3">
               {savedJobs.map((job) => (
-                <div key={job.id} className="border-b p-4 rounded-lg shadow-md bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex justify-between items-center">
+                <div
+                  key={job.id}
+                  className="border-b p-4 rounded-lg shadow-md bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex justify-between items-center"
+                >
                   <Link to={`/job/${job.id}`} className="flex-1 cursor-pointer">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white hover:text-blue-600 transition">
                       {job.title}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-300">{job.company}</p>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      {job.company}
+                    </p>
                   </Link>
 
-                  <button onClick={() => removeSavedJob(job.id)} className="text-red-500 hover:text-red-600 transition ml-3">
+                  <button
+                    onClick={() => removeSavedJob(job.id)}
+                    className="text-red-500 hover:text-red-600 transition ml-3"
+                  >
                     <Trash2 size={20} />
                   </button>
                 </div>

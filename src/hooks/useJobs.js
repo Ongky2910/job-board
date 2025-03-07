@@ -27,18 +27,24 @@ const useJobs = () => {
   const [totalJobs, setTotalJobs] = useState(0);
 
   // ✅ Memoization untuk parameter request agar tidak berubah setiap render
-  const fetchParams = useMemo(
-    () => ({
+  const fetchParams = useMemo(() => {
+    const params = {
       user_id: user?.id,
-      search: searchTerm.trim() || undefined, 
-      job_type: filterType !== "All" ? filterType : undefined, 
+      search: searchTerm.trim() || undefined,
+      job_type: filterType !== "All" ? filterType : undefined,
       contract_type: contractType !== "All" ? contractType : undefined,
       work_type: workType !== "All" ? workType : undefined,
       page: currentPage,
       limit: 50,
-    }),
-    [user, searchTerm, filterType, contractType, workType, currentPage]
-  );
+    };
+
+    Object.keys(params).forEach((key) => {
+      if (params[key] === undefined) delete params[key];
+    });
+
+    return params;
+  }, [user, searchTerm, filterType, contractType, workType, currentPage]);
+    
 
   // ✅ Ambil jumlah pekerjaan yang telah disimpan & dilamar oleh user
   const fetchUserJobCounts = useCallback(async () => {
