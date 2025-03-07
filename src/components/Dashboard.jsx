@@ -4,6 +4,8 @@ import useJobs from "../hooks/useJobs";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Trash2 } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 axios.defaults.withCredentials = true;
 
@@ -23,7 +25,7 @@ export default function Dashboard() {
     import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
-    if (isUserLoading) return;
+    if (isUserLoading || !user?.id) return; 
 
     if (!user?.id) {
       console.warn("🔴 No user found, redirecting to login...");
@@ -61,6 +63,7 @@ export default function Dashboard() {
 
         const jobsRes = await axios.get(`${API_BASE_URL}/api/jobs`, {
           headers: { Authorization: `Bearer ${accessToken}` },
+          params: { user_id: userRes.data.user.id },
           withCredentials: true,
         });
 
@@ -76,20 +79,31 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, isUserLoading]);
 
   const removeSavedJob = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/jobs/saved/${id}`, {
-        withCredentials: true,
+      await axios.delete(`${API_BASE_URL}/api/jobs/saved/${id}`, { withCredentials: true });
+
+      // Menghapus job dari state `savedJobs` setelah berhasil dihapus
+      setSavedJobs((prevSavedJobs) => prevSavedJobs.filter((job) => job.id !== id));
+
+      // Menampilkan pemberitahuan sukses
+      toast.success("Job successfully removed from saved!", {
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 5000,
+        hideProgressBar: false,
       });
-      const updatedJobs = savedJobs.filter((job) => job.id !== id);
-      setSavedJobs(updatedJobs);
     } catch (error) {
       console.error("❌ Error removing saved job:", error);
-      setError("Failed to remove saved job.");
+      toast.error("Failed to remove job. Please try again.", {
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 5000,
+        hideProgressBar: false,
+      });
     }
   };
+  
 
   if (loading) {
     return (
@@ -135,9 +149,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Your Jobs Section */}
+        {/* Save Jobs Section */}
         <div className="mt-8">
-          <h2 className="text-2xl font-semibold mb-4">Your Jobs</h2>
+          <h2 className="text-2xl font-semibold mb-4">Your Applied Jobs</h2>
           {Array.isArray(jobs) && jobs.length > 0 ? (
             <ul className="space-y-4">
               {jobs.map((job, index) => (
@@ -161,8 +175,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Saved Jobs Section */}
-        <div className="mt-8">
+         {/* Saved Jobs Section */}
+         <div className="mt-8">
           <h2 className="text-2xl font-semibold mb-4">Saved Jobs</h2>
           {savedJobs.length === 0 ? (
             <p className="text-gray-500">No saved jobs yet.</p>
@@ -173,14 +187,12 @@ export default function Dashboard() {
                   key={job.id}
                   className="border-b p-4 rounded-lg shadow-md bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex justify-between items-center"
                 >
-                  <Link to={`/job/${job.id}`} className="flex-1 cursor-pointer">
+                  <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white hover:text-blue-600 transition">
                       {job.title}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      {job.company}
-                    </p>
-                  </Link>
+                    <p className="text-gray-600 dark:text-gray-300">{job.company}</p>
+                  </div>
 
                   <button
                     onClick={() => removeSavedJob(job.id)}
@@ -194,6 +206,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Pemberitahuan */}
+      <ToastContainer />
     </div>
   );
 }
