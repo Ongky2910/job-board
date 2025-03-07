@@ -10,6 +10,7 @@ const getUserJobList = async (req, res) => {
     }
 
     const { location, job_type, contractType, workType } = req.query;
+    console.log("Raw Query Params:", req.query);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -309,7 +310,7 @@ const fetchJobsWithRetry = async (url, retries = 5, delay = 2000) => {
 
 // ✅ Mengambil daftar pekerjaan dari API eksternal
 const getExternalJobListings = async (req, res) => {
-  console.log("External jobs route hit!");
+  console.log("🚀 External jobs route hit!");
 
   try {
     const location = req.query.where || "New York";
@@ -327,19 +328,26 @@ const getExternalJobListings = async (req, res) => {
       return res.status(500).json({ message: "Missing API credentials" });
     }
 
-    const resultsPerPage = parseInt(req.query.limit) || 6;
+    const userLimit = parseInt(req.query.limit) || 10; // Berapa banyak job per page di frontend
+    const resultsPerPage = userLimit; // Sesuaikan jumlah job per page
     const page = parseInt(req.query.page) || 1;
-
-    console.log("✅ Requested Page:", page);
-    console.log("✅ Results Per Page:", resultsPerPage);
 
     const apiUrl = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${app_id}&app_key=${app_key}&where=${encodeURIComponent(
       location
     )}${keyword}&results_per_page=${resultsPerPage}`;
 
-    console.log("Fetching data from:", apiUrl);
+    console.log("📌 Fetching from URL:", apiUrl);
+    console.log("🔍 Query Params Parsed:", {
+      location,
+      keyword,
+      contractTypeFilter,
+      workTypeFilter,
+      page,
+      resultsPerPage,
+    });
 
     const jobData = await fetchJobsWithRetry(apiUrl);
+    console.log("🔍 Adzuna Job Data Fetched:", jobData.results?.length || 0);
 
     if (!jobData.results || jobData.results.length === 0) {
       return res.json({
@@ -350,8 +358,8 @@ const getExternalJobListings = async (req, res) => {
       });
     }
 
-    console.log(`Total Jobs Available: ${jobData.count}`);
-    console.log(`Jobs Fetched: ${jobData.results.length}`);
+    console.log(`📌 Total Jobs Available: ${jobData.count}`);
+    console.log(`📌 Jobs Fetched from API: ${jobData.results.length}`);
 
     let newJobs = jobData.results.map((job) => ({
       externalId: job.id,
@@ -372,19 +380,25 @@ const getExternalJobListings = async (req, res) => {
         : "Onsite",
     }));
 
+    console.log("🔍 New Jobs Mapped:", newJobs.length);
+
     let savedJobs = await Job.find({
       externalId: { $in: newJobs.map((job) => job.externalId) },
     });
     let existingJobIds = new Set(savedJobs.map((job) => job.externalId));
+    console.log("📌 Jobs Already in DB:", savedJobs.length);
 
     let jobsToInsert = newJobs.filter(
       (job) => !existingJobIds.has(job.externalId)
     );
+
     if (jobsToInsert.length > 0) {
       await Job.insertMany(jobsToInsert);
+      console.log("✅ Jobs Inserted into DB:", jobsToInsert.length);
     }
 
     let finalJobs = [...savedJobs, ...jobsToInsert];
+    console.log("💡 Jobs Before Filtering:", finalJobs.length);
 
     if (contractTypeFilter) {
       finalJobs = finalJobs.filter(
@@ -397,35 +411,34 @@ const getExternalJobListings = async (req, res) => {
       finalJobs = finalJobs.filter((job) => job.workType === workTypeFilter);
     }
 
-    const totalFilteredJobs = finalJobs.length;
-    const totalPages = Math.ceil(totalFilteredJobs / resultsPerPage);
+    console.log("💡 Jobs After Filtering:", finalJobs.length);
 
-    // 🔥 **Pagination**
-    const startIndex = (page - 1) * resultsPerPage;
-    const endIndex = startIndex + resultsPerPage;
-    const paginatedJobs = finalJobs.slice(startIndex, endIndex);
+    if (finalJobs.length === 0) {
+      console.log(
+        "⚠️ Tidak ada data setelah filtering, pagination akan kosong!"
+      );
+    }
 
-    console.log("🔍 Total Jobs Sebelum Filtering:", jobData.results.length);
-    console.log("🔍 Total Jobs Setelah Filtering:", finalJobs.length);
-    console.log("🔍 resultsPerPage:", resultsPerPage);
-    console.log("🔍 totalFilteredJobs:", totalFilteredJobs);
-    console.log("🔍 totalPages dihitung:", totalPages);
-    console.log("🔍 Jobs yang dikirim ke frontend:", paginatedJobs.length);
+    const totalFilteredJobs = jobData.count; // Gunakan total dari Adzuna
+    const totalPages = Math.ceil(jobData.count / userLimit);
+    const paginatedJobs = finalJobs; // Langsung pakai hasil dari API
+
+    console.log("📌 Total Pages Calculated:", totalPages);
+    console.log("📌 Jobs yang dikirim ke frontend:", paginatedJobs.length);
 
     res.json({
-      jobs: paginatedJobs, // ✅ Sudah di-slice
+      jobs: paginatedJobs,
       totalJobs: totalFilteredJobs,
       totalPages: totalPages,
       currentPage: page,
     });
   } catch (error) {
-    console.error("Error fetching and saving jobs:", error);
+    console.error("❌ Error fetching and saving jobs:", error);
     res
       .status(500)
       .json({ message: "Error fetching jobs", error: error.message });
   }
 };
-
 
 module.exports = {
   getUserJobList,
