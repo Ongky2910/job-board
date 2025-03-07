@@ -93,6 +93,12 @@ const useJobs = () => {
         const totalExternalJobs = externalJobsResponse.data.totalJobs || 0;
         const totalJobsCount = totalLocalJobs + totalExternalJobs;
 
+        console.log("🔢 Total Jobs dari Backend:", totalJobsCount);
+        console.log(
+          "📄 Total Pages yang Dihitung:",
+          Math.ceil(totalJobsCount / jobsPerPage)
+        );
+
         let allJobs = [
           ...(Array.isArray(localJobsResponse.data.jobs)
             ? localJobsResponse.data.jobs
@@ -108,7 +114,9 @@ const useJobs = () => {
         // Update state dengan data yang benar
         setJobs(allJobs);
         setTotalJobs(totalJobsCount);
+
         setTotalPages(Math.ceil(totalJobsCount / jobsPerPage));
+        console.log("🔄 Total Pages:", totalPages);
       } catch (err) {
         console.error("❌ Error fetching jobs:", err);
         if (err.response?.status === 401) logoutUser();
@@ -236,7 +244,7 @@ const useJobs = () => {
       fetchJobs();
       fetchUserJobCounts();
     }
-  }, [fetchParams, isUserLoading, fetchUserJobCounts, fetchJobs]);
+  }, [fetchParams, isUserLoading, fetchUserJobCounts, fetchJobs, currentPage]);
 
   console.log("🔄 Total Pages:", totalPages);
 

@@ -29,10 +29,10 @@ const JobList = () => {
   const jobsPerPage = 10;
   const startIndex = (currentPage - 1) * jobsPerPage;
   const displayedJobs =
-  jobs.length > 0 ? jobs.slice(startIndex, startIndex + jobsPerPage) : [];
-
+    jobs.length > 0 ? jobs.slice(startIndex, startIndex + jobsPerPage) : [];
 
   console.log("Rendering JobList", { displayedJobs, currentPage, totalPages });
+  console.log("Jobs displayed in UI:", displayedJobs);
 
   return (
     <section id="jobs" className="py-16 bg-gray-100 dark:bg-gray-800">
@@ -77,7 +77,7 @@ const JobList = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition"
+                className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition text-black"
               >
                 <h3 className="text-xl font-semibold text-blue-600">
                   {job.title || "No title available"}
