@@ -25,6 +25,7 @@ const useJobs = () => {
   const [filterType, setFilterType] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedJobs, setAppliedJobs] = useState([]);
   const [jobsAppliedCount, setJobsAppliedCount] = useState(0);
   const [jobsSavedCount, setJobsSavedCount] = useState(0);
   const [savedJobs, setSavedJobs] = useState([]);
@@ -49,19 +50,43 @@ const useJobs = () => {
     return params;
   }, [user, searchTerm, filterType, contractType, workType, currentPage]);
 
-  // ✅ Fetch jumlah pekerjaan yang telah dilamar & disimpan
+  // ✅ Fetch jumlah pekerjaan yang telah dilamar 
+  const fetchAppliedJobs = useCallback(async () => {
+    if (!user?.id) return;
+  
+    try {
+      const response = await axios.get(`${BASE_URL}/api/jobs/applied`, {
+        withCredentials: true,
+      });
+      console.log("Fetched applied jobs:", response.data);
+      
+      const fetchedAppliedJobs = response.data || [];
+      setAppliedJobs(fetchedAppliedJobs);
+  
+      console.log("Fetched applied jobs:", fetchedAppliedJobs);
+    } catch (error) {
+      console.error("❌ Error fetching applied jobs:", error);
+    }
+  }, [user?.id]);
+  
   const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, {
-        withCredentials: true,
-      });
-      setJobsAppliedCount(response.data.user.appliedJobs?.length || 0);
-      setJobsSavedCount(response.data.user.savedJobs?.length || 0);
+      const appliedJobsCount = appliedJobs.length; // Mengambil count langsung dari state appliedJobs
+      const savedJobsCount = savedJobs.length || 0; // Ambil dari savedJobs
+  
+      setJobsAppliedCount(appliedJobsCount);  // Update dengan count yang benar
+      setJobsSavedCount(savedJobsCount);
+  
+      console.log("✅ Updated jobsAppliedCount:", appliedJobsCount);
+      console.log("✅ Updated jobsSavedCount:", savedJobsCount);
     } catch (error) {
       console.error("❌ Error fetching user job counts:", error);
     }
-  }, [user?.id]);
+  }, [user?.id, appliedJobs, savedJobs]);  // Tambahkan savedJobs untuk menghitung saved job count
+  
+  
+  
 
   // ✅ Fetch pekerjaan yang sudah disimpan
   const fetchSavedJobs = useCallback(async () => {
@@ -75,7 +100,7 @@ const useJobs = () => {
       console.error("❌ Error fetching saved jobs:", error);
     }
   }, [user?.id]);
-
+    
   // ✅ Fungsi utama untuk mengambil data pekerjaan
   const fetchJobs = useCallback(async () => {
     if (!user?.id || isUserLoading) return;
@@ -170,41 +195,31 @@ const handleApplyJob = async (jobId) => {
   console.log("Applying for job with ID:", jobId);
 
   try {
-    // ✅ Simpan response ke dalam variabel
-    const response = await axios.post(
-      `${BASE_URL}/api/jobs/${jobId}/apply`,
-      {},
-      { withCredentials: true }
-    );
+    await axios.post(`${BASE_URL}/api/jobs/${jobId}/apply`, {}, { withCredentials: true });
 
-    console.log("Apply job response:", response.data);
+    setAppliedJobs((prevAppliedJobs) => {
+      const updatedAppliedJobs = [...prevAppliedJobs, { _id: jobId }];
+      console.log("Updated appliedJobs state:", updatedAppliedJobs); // ✅ Debug log
+      return updatedAppliedJobs;
+    });
 
-    // ✅ Update state agar tombol berubah setelah apply
     setJobs((prevJobs) =>
       prevJobs.map((job) =>
-        job._id === jobId || job.id === jobId
-          ? { ...job, isApplied: true }
-          : job
+        job._id === jobId || job.id === jobId ? { ...job, isApplied: true } : job
       )
     );
 
     setJobsAppliedCount((prevCount) => prevCount + 1);
+    console.log("Updated jobsAppliedCount:", jobsAppliedCount + 1); // ✅ Debug log
+
+    fetchAppliedJobs(); 
+
     toast.success("📩 Successfully applied for the job!", { autoClose: 3000 });
   } catch (error) {
     console.error("❌ Error applying for job:", error);
-
-    // Cek apakah error.response ada
-    if (error.response) {
-      console.error("Server responded with:", error.response.data);
-      toast.error(`❌ Failed to apply: ${error.response.data.message || "Please try again."}`);
-    } else {
-      console.error("No response from server, possible network issue.");
-      toast.error("❌ Failed to apply. Please check your connection.");
-    }
+    toast.error(`❌ Failed to apply: ${error.response?.data?.message || "Please try again."}`);
   }
 };
-
-  
 
   // ✅ Hapus pekerjaan dari daftar yang disimpan
   const handleRemoveSavedJob = async (jobId) => {
@@ -232,10 +247,11 @@ const handleApplyJob = async (jobId) => {
   useEffect(() => {
     if (!isUserLoading && user?.id) {
       fetchJobs();
-      fetchUserJobCounts();
-      fetchSavedJobs();
+      fetchAppliedJobs();  // Ambil applied jobs setelah fetchJobs
+      fetchSavedJobs();    // Ambil saved jobs setelah fetchJobs
     }
-  }, [user?.id, currentPage]);
+  }, [user?.id, currentPage, fetchJobs, fetchAppliedJobs, fetchSavedJobs, isUserLoading]);
+  
 
   return {
     jobs,

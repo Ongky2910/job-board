@@ -17,12 +17,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [savedJobs, setSavedJobs] = useState([]);
   const [appliedJobs, setAppliedJobs] = useState([]);
+  
   const [error, setError] = useState(null);
   const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   useEffect(() => {
     if (isUserLoading || !user?.id) return;
-
+  
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -35,18 +36,26 @@ export default function Dashboard() {
             return;
           }
         }
-
+  
         const userRes = await axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           withCredentials: true,
         });
-
+  
         if (userRes?.data?.user) {
           setUserData(userRes.data.user);
           setSavedJobs(userRes.data.user.savedJobs ?? []);
           setAppliedJobs(userRes.data.user.appliedJobs ?? []);
+        
+          // Cek tipe dan panjang appliedJobs
+          console.log("Applied Jobs Type:", Array.isArray(userRes.data.user.appliedJobs)); // Harusnya true
+          console.log("Applied Jobs Length:", userRes.data.user.appliedJobs?.length); // Harusnya 12
+          
+          // Log Applied Jobs data
+          console.log("Fetched applied jobs:", userRes.data.user.appliedJobs); // Cek data yang di-fetch
         }
-
+        
+  
         const jobsRes = await axios.get(`${API_BASE_URL}/api/jobs`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           params: { user_id: userRes.data.user.id },
@@ -61,9 +70,10 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [user?.id, isUserLoading]);
+  
 
   const removeSavedJob = async (id) => {
     try {
@@ -137,7 +147,6 @@ export default function Dashboard() {
           <p>No saved jobs yet.</p>
         )}
       </div>
-      <ToastContainer />
     </div>
   );
 }

@@ -98,10 +98,10 @@ const JobList = () => {
                   {job.location || "Location not provided"} •{" "}
                   {job.contractType || "Unknown"}
                 </p>
-                <ToastContainer position="top-right" />
-
+               
                 {/* 🔹 Apply & Save Buttons */}
                 <div className="flex gap-2 mt-4">
+                {console.log("Job data: ", job)} 
                   <button
                     onClick={() => {
                       console.log("Applying for job:", job._id || job.id);
