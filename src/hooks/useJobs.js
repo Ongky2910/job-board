@@ -59,7 +59,7 @@ const useJobs = () => {
         withCredentials: true,
       });
       console.log("Fetched applied jobs:", response.data);
-      
+
       const fetchedAppliedJobs = response.data || [];
       setAppliedJobs(fetchedAppliedJobs);
   
@@ -72,10 +72,10 @@ const useJobs = () => {
   const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const appliedJobsCount = appliedJobs.length; // Mengambil count langsung dari state appliedJobs
-      const savedJobsCount = savedJobs.length || 0; // Ambil dari savedJobs
+      const appliedJobsCount = appliedJobs.length; 
+      const savedJobsCount = savedJobs.length || 0; 
   
-      setJobsAppliedCount(appliedJobsCount);  // Update dengan count yang benar
+      setJobsAppliedCount(appliedJobsCount);  
       setJobsSavedCount(savedJobsCount);
   
       console.log("✅ Updated jobsAppliedCount:", appliedJobsCount);
@@ -83,9 +83,8 @@ const useJobs = () => {
     } catch (error) {
       console.error("❌ Error fetching user job counts:", error);
     }
-  }, [user?.id, appliedJobs, savedJobs]);  // Tambahkan savedJobs untuk menghitung saved job count
-  
-  
+  }, [user?.id, appliedJobs, savedJobs]);  
+
   
 
   // ✅ Fetch pekerjaan yang sudah disimpan
@@ -192,11 +191,11 @@ const handleApplyJob = async (jobId) => {
     return;
   }
 
-  console.log("Applying for job with ID:", jobId);
-
   try {
+    // Kirim request apply job
     await axios.post(`${BASE_URL}/api/jobs/${jobId}/apply`, {}, { withCredentials: true });
 
+    // Update appliedJobs langsung
     setAppliedJobs((prevAppliedJobs) => {
       const updatedAppliedJobs = [...prevAppliedJobs, { _id: jobId }];
       console.log("Updated appliedJobs state:", updatedAppliedJobs); // ✅ Debug log
@@ -209,17 +208,15 @@ const handleApplyJob = async (jobId) => {
       )
     );
 
-    setJobsAppliedCount((prevCount) => prevCount + 1);
-    console.log("Updated jobsAppliedCount:", jobsAppliedCount + 1); // ✅ Debug log
-
-    fetchAppliedJobs(); 
-
+    // Call fetchAppliedJobs to get the latest applied jobs after applying for a job
+    fetchAppliedJobs(); // Refresh applied jobs to make sure the count is accurate
     toast.success("📩 Successfully applied for the job!", { autoClose: 3000 });
   } catch (error) {
     console.error("❌ Error applying for job:", error);
     toast.error(`❌ Failed to apply: ${error.response?.data?.message || "Please try again."}`);
   }
 };
+
 
   // ✅ Hapus pekerjaan dari daftar yang disimpan
   const handleRemoveSavedJob = async (jobId) => {
@@ -247,11 +244,14 @@ const handleApplyJob = async (jobId) => {
   useEffect(() => {
     if (!isUserLoading && user?.id) {
       fetchJobs();
-      fetchAppliedJobs();  // Ambil applied jobs setelah fetchJobs
-      fetchSavedJobs();    // Ambil saved jobs setelah fetchJobs
+      fetchAppliedJobs();  
+      fetchSavedJobs();  
     }
   }, [user?.id, currentPage, fetchJobs, fetchAppliedJobs, fetchSavedJobs, isUserLoading]);
   
+  useEffect(() => {
+    setJobsAppliedCount(appliedJobs.length);  
+  }, [appliedJobs]); 
 
   return {
     jobs,
