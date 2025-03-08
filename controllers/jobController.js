@@ -237,18 +237,25 @@ const getAppliedJobs = async (req, res) => {
   try {
     console.log("Fetching applied jobs for user:", req.user?.id);
 
-    const jobs = await Job.find({ appliedUsers: req.user.id })
-      .populate("postedBy", "name email")
-      .lean();
+    // Cari user & ambil daftar job yang sudah dilamar
+    const user = await User.findById(req.user.id).populate({
+      path: "appliedJobs",
+      populate: { path: "postedBy", select: "name email" }, 
+    });
 
-    console.log("Applied jobs found:", jobs.length);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.status(200).json(jobs);
+    console.log("Applied jobs found:", user.appliedJobs.length);
+
+    res.status(200).json(user.appliedJobs); 
   } catch (err) {
     console.error("Error retrieving applied jobs:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 // ✅ Menyimpan pekerjaan ke daftar favorit
 const saveJob = asyncHandler(async (req, res) => {
@@ -259,7 +266,7 @@ const saveJob = asyncHandler(async (req, res) => {
     // Cari pekerjaan dan pengguna berdasarkan ID
     const job = await Job.findById(id);
     const user = await User.findById(userId);
-
+    console.log(user); 
     // Validasi: Pastikan pekerjaan dan pengguna ada
     if (!job || !user) {
       return res.status(404).json({ message: "User or Job not found" });

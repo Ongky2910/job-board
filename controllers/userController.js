@@ -19,7 +19,7 @@ const getUserDashboard = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
-  const appliedJobs = await Job.find({ appliedBy: userId }).countDocuments();
+  const appliedJobs = await Job.find({ appliedBy: userId, deleted: false });
   console.log("Applied Jobs Count:", appliedJobs);
 
   const savedJobs = user.savedJobs || [];
@@ -28,7 +28,7 @@ const getUserDashboard = asyncHandler(async (req, res) => {
     user: {
       name: user.displayName,
       email: user.email,
-      jobApplied: appliedJobs,
+      jobApplied: appliedJobs.length,
       jobSaved: savedJobs.length,
       appliedJobs: appliedJobs,
       savedJobs: savedJobs,
