@@ -25,7 +25,8 @@ const useJobs = () => {
   const [jobsSavedCount, setJobsSavedCount] = useState(0);
   const [savedJobs, setSavedJobs] = useState([]);
   const [totalJobs, setTotalJobs] = useState(0);
-
+  const [isFetchingJobs, setIsFetchingJobs] = useState(false);
+  
   // ✅ Memoization untuk parameter request agar tidak berubah setiap render
   const fetchParams = useMemo(() => {
     const params = {
@@ -44,10 +45,10 @@ const useJobs = () => {
 
     return params;
   }, [user, searchTerm, filterType, contractType, workType, currentPage]);
-    
 
   // ✅ Ambil jumlah pekerjaan yang telah disimpan & dilamar oleh user
   const fetchUserJobCounts = useCallback(async () => {
+    console.log("🔄 FetchUserJobCounts dipanggil!");
     if (!user?.id) return;
     try {
       const response = await axios.get(`${BASE_URL}/api/auth/dashboard`, {
@@ -65,58 +66,51 @@ const useJobs = () => {
   // ✅ Fungsi utama untuk mengambil data pekerjaan
   const fetchJobs = useCallback(
     debounce(async () => {
+      const timestamp = new Date().toISOString();
+      console.log(`🔄 [${timestamp}] FetchJobs dipanggil!`);
+  
       if (!user?.id || isUserLoading) return;
-
-      console.log("Fetching jobs with params", fetchParams);
-
+  
+      console.log(`🛠️ [${timestamp}] Fetching jobs with params`, fetchParams);
+  
+      setIsFetchingJobs(true);
       setIsLoading(true);
       setError(null);
-
+  
       // Bersihkan params sebelum request
-
       const cleanedParams = { ...fetchParams };
       Object.keys(cleanedParams).forEach((key) => {
         if (cleanedParams[key] === undefined || cleanedParams[key] === null) {
           delete cleanedParams[key];
         }
       });
-
-      console.log("Final Filter Params", cleanedParams);
-      
-
+  
+      console.log(`🧹 [${timestamp}] Final Filter Params`, cleanedParams);
+  
       try {
         const [localJobsResponse, externalJobsResponse] = await Promise.all([
           axios.get(`${BASE_URL}/api/jobs`, {
-            params: cleanedParams, 
+            params: cleanedParams,
             withCredentials: true,
             headers: { Authorization: `Bearer ${user?.token}` },
           }),
           axios.get(`${BASE_URL}/api/jobs/external-jobs`, {
-            params: cleanedParams, 
+            params: cleanedParams,
             withCredentials: true,
             headers: { Authorization: `Bearer ${user?.token}` },
           }),
         ]);
-
-        console.log(
-          "📦 API Response - Local Jobs:",
-          localJobsResponse.data
-        );
-        console.log(
-          "📦 API Response - External Jobs:",
-          externalJobsResponse.data
-        );
-
+  
+        console.log(`📦 [${timestamp}] API Response - Local Jobs:`, localJobsResponse.data);
+        console.log(`📦 [${timestamp}] API Response - External Jobs:`, externalJobsResponse.data);
+  
         const totalLocalJobs = localJobsResponse.data.totalJobs || 0;
         const totalExternalJobs = externalJobsResponse.data.totalJobs || 0;
         const totalJobsCount = totalLocalJobs + totalExternalJobs;
-
-        console.log("🔢 Total Jobs dari Backend:", totalJobsCount);
-        console.log(
-          "📄 Total Pages yang Dihitung:",
-          Math.ceil(totalJobsCount / jobsPerPage)
-        );
-
+  
+        console.log(`🔢 [${timestamp}] Total Jobs dari Backend:`, totalJobsCount);
+        console.log(`📄 [${timestamp}] Total Pages yang Dihitung:`, Math.ceil(totalJobsCount / jobsPerPage));
+  
         let allJobs = [
           ...(Array.isArray(localJobsResponse.data.jobs)
             ? localJobsResponse.data.jobs
@@ -125,30 +119,30 @@ const useJobs = () => {
             ? externalJobsResponse.data.jobs
             : []),
         ];
-
-        console.log("🔄 Update state dengan jobs:", allJobs);
-
+  
+        console.log(`🔄 [${timestamp}] Update state dengan jobs:`, allJobs);
+  
         // Update state dengan data yang benar
         setJobs(allJobs);
         setTotalJobs(totalJobsCount);
-
-      // ✅ Pastikan total halaman dihitung ulang setiap update
-      const calculatedTotalPages = Math.ceil(totalJobsCount / jobsPerPage);
-      setTotalPages(calculatedTotalPages);
-      
-      console.log("✅ Total Jobs:", totalJobsCount);
-      console.log("📄 Total Pages:", calculatedTotalPages);
+  
+        // ✅ Pastikan total halaman dihitung ulang setiap update
+        const calculatedTotalPages = Math.ceil(totalJobsCount / jobsPerPage);
+        setTotalPages(calculatedTotalPages);
+  
+        console.log(`✅ [${timestamp}] Total Jobs:`, totalJobsCount);
+        console.log(`📄 [${timestamp}] Total Pages:`, calculatedTotalPages);
       } catch (err) {
-        console.error("❌ Error fetching jobs:", err);
+        console.error(`❌ [${timestamp}] Error fetching jobs:`, err);
         if (err.response?.status === 401) logoutUser();
         else setError(err.response?.data?.message || "Failed to fetch jobs.");
       } finally {
         setIsLoading(false);
       }
     }, 300),
-    [user?.id, isUserLoading, logoutUser, fetchParams]
+    [user?.id, currentPage, logoutUser]
   );
-
+  
   // ✅ Fungsi untuk menyimpan pekerjaan (Save Job)
   const handleSaveJob = async (jobId) => {
     if (!user) {
@@ -258,14 +252,18 @@ const useJobs = () => {
     }
   };
 
-  // ✅ Atur debounce untuk fetch jobs
-
   useEffect(() => {
-    if (!isUserLoading && user) {
-      fetchJobs();
+    if (!isUserLoading && user?.id) {
+      console.log("✅ User sudah login, fetching jobs...");
+      
+      fetchJobs(); 
       fetchUserJobCounts();
+    } else {
+      console.log("⏳ Menunggu user data tersedia...");
     }
-  }, [fetchParams, isUserLoading, fetchUserJobCounts, fetchJobs, currentPage]);
+  }, [user?.id, currentPage]); 
+  
+
 
   console.log("🔄 Total Pages:", totalPages);
 

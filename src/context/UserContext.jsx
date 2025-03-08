@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const UserContext = createContext();
-
 export const useUser = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
@@ -22,14 +21,11 @@ export const UserProvider = ({ children }) => {
       const response = await axios.get(`${API_URL}/api/auth/refresh-token`, {
         withCredentials: true,
       });
-  
+
       if (response.data.token) {
-        console.log("✅ New token:", response.data.token);
-        
-        // ⬇️ Perbaikan: Set Authorization header lebih dulu
-        axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
-  
+        console.log("✅ New token received");
         localStorage.setItem("accessToken", response.data.token);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
         return response.data.token;
       }
     } catch (error) {
@@ -37,7 +33,6 @@ export const UserProvider = ({ children }) => {
       return null;
     }
   };
-  
 
   // ✅ Cek autentikasi saat pertama kali load
   const checkAuth = async () => {
@@ -53,7 +48,7 @@ export const UserProvider = ({ children }) => {
   
       if (!accessToken) {
         console.error("❌ No valid token found, logging out...");
-        return logoutUser(); // ⬅️ Logout hanya jika refresh token gagal
+        return logoutUser();
       }
   
       console.log("📌 Using token:", accessToken);
@@ -66,6 +61,7 @@ export const UserProvider = ({ children }) => {
       if (response.data.user) {
         setUser(response.data.user);
       } else {
+        console.warn("⚠️ No user found in verify-token response!");
         setUser(null);
       }
     } catch (error) {
@@ -73,7 +69,7 @@ export const UserProvider = ({ children }) => {
         console.warn("🔄 Token expired, trying to refresh...");
         const newAccessToken = await refreshToken();
         if (newAccessToken) {
-          return checkAuth(); 
+          return checkAuth();
         }
       }
       console.error("❌ Authentication error:", error);
@@ -83,15 +79,14 @@ export const UserProvider = ({ children }) => {
   };
   
   useEffect(() => {
-    if (window.location.pathname !== "/register" && window.location.pathname !== "/login") {
-      setTimeout(() => {
-        checkAuth();
-      }, 1000); 
+    if (!["/register", "/login"].includes(window.location.pathname)) {
+      checkAuth();
     }
   }, []);
-  
 
+  // ✅ Fungsi Login
   const loginUser = async (email, password) => {
+    setIsUserLoading(true);
     try {
       console.log("🟢 Logging in...", email);
       const response = await axios.post(
@@ -102,14 +97,15 @@ export const UserProvider = ({ children }) => {
   
       console.log("✅ Login Response:", response.data);
   
-      if (response.data.user && response.data.token) {
-        console.log("🔑 Token received:", response.data.token);
-        localStorage.setItem("accessToken", response.data.token);
-        
-        // Cek apakah token benar-benar tersimpan
-        console.log("📌 Token saved in localStorage:", localStorage.getItem("accessToken"));
+      if (response.data.user) {
+        console.log("👤 User logged in:", response.data.user);
   
+        // ⬇️ Set user langsung, tanpa harus menunggu token
         setUser(response.data.user);
+  
+        // 🔄 Coba refresh token karena token ada di cookies
+        await refreshToken();
+  
         return response.data.user;
       } else {
         console.error("❌ User data not found in response!");
@@ -118,37 +114,31 @@ export const UserProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("❌ Login Error:", error.response?.data || error.message);
-      setError(error.response?.data?.message || "Login failed, please try again.");
+      setError(
+        error.response?.data?.message || "Login failed, please try again."
+      );
       return null;
+    } finally {
+      setIsUserLoading(false);
     }
   };
+  
 
   // ✅ Fungsi Logout
   const logoutUser = async () => {
     try {
       console.log("🚪 Logging out...");
-      console.log("⛔ Current token before logout:", localStorage.getItem("accessToken"));
-  
-      await axios.post(
-        `${API_URL}/api/auth/logout`,
-        {},
-        { withCredentials: true }
-      );
-  
+      await axios.post(`${API_URL}/api/auth/logout`, {}, { withCredentials: true });
       setUser(null);
       localStorage.removeItem("accessToken");
-      axios.defaults.headers.common["Authorization"] = "";
-  
+      delete axios.defaults.headers.common["Authorization"];
       console.log("✅ User logged out successfully!");
-      console.log("🗑️ Token after logout:", localStorage.getItem("accessToken")); // Seharusnya null
-  
       setIsUserLoading(false);
       navigate("/login");
     } catch (error) {
       console.error("❌ Logout failed:", error);
     }
   };
-  
 
   return (
     <UserContext.Provider

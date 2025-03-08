@@ -20,6 +20,13 @@ export default function HeroSection() {
     }
   }, [user]);
   
+  // 🔹 Tambahkan useEffect ini untuk memantau perubahan loading state & user
+  useEffect(() => {
+    console.log("User loading state:", isUserLoading);
+    console.log("Current user data:", user);
+  }, [isUserLoading, user]);
+  
+  
   
   if (isUserLoading) {
     return (
