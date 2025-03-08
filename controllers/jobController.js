@@ -1,5 +1,7 @@
 const axios = require("axios");
 const Job = require("../models/Job");
+const User = require("../models/User"); 
+
 const asyncHandler = require("express-async-handler");
 
 // ✅ Mendapatkan daftar pekerjaan yang diposting oleh pengguna
