@@ -180,7 +180,7 @@ const handleSaveJob = async (jobId) => {
     toast.success("💾 Job saved successfully!", { autoClose: 3000 });
   } catch (error) {
     console.error("❌ Error saving job:", error);
-    toast.error("❌ Failed to save job. Please try again.");
+    toast.error("❌ Failed to save job. Try again.");
   }
 };
 
