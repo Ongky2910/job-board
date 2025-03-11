@@ -150,6 +150,32 @@ const deleteJob = async (req, res) => {
   }
 };
 
+const removeSavedJob = async (req, res) => {
+  console.log("Received job ID:", req.params.id);
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized: Please log in" });
+    }
+
+    const jobId = req.params.id;
+    const userId = req.user.id;
+
+    console.log("Checking for SavedJob with:", { userId, jobId });
+    
+    // Hapus data dari collection/table SavedJobs
+    const deletedJob = await SavedJob.findOneAndDelete({ userId, jobId });
+
+    if (!deletedJob) {
+      return res.status(404).json({ message: "Saved job not found" });
+    }
+
+    res.json({ message: "Job removed from saved" });
+  } catch (error) {
+    console.error("Error removing saved job:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 const restoreJob = async (req, res) => {
   try {
     console.log("Restore Job Hit!");
@@ -440,6 +466,7 @@ module.exports = {
   createJob,
   updateJob,
   deleteJob,
+  removeSavedJob,
   restoreJob,
   applyJob,
   getAppliedJobs,

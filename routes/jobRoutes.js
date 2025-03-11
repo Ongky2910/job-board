@@ -8,6 +8,7 @@ const {
   createJob, 
   updateJob, 
   deleteJob, 
+  removeSavedJob,
   restoreJob, 
   applyJob, 
   getAppliedJobs, 
@@ -44,6 +45,8 @@ router.post("/", protect, createJob);
 // Apply & Save Job - Hanya user login yang bisa apply/save job
 router.post("/:id/apply", protect, applyJob);
 router.post("/:id/save", protect, saveJob);
+
+router.delete("/saved/:id", protect, removeSavedJob);
 
 // Mendapatkan daftar job yang telah dilamar & disimpan user
 router.get("/applied", protect, getAppliedJobs);
