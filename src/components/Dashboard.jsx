@@ -22,7 +22,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [savedJobs, setSavedJobs] = useState([]);
   const [appliedJobs, setAppliedJobs] = useState([]);
-
+  const [selectedJob, setSelectedJob] = useState(null);
   const [error, setError] = useState(null);
   const API_BASE_URL =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
@@ -177,6 +177,19 @@ export default function Dashboard() {
           </ul>
         ) : (
           <p className="text-gray-500">No saved jobs yet.</p>
+        )}
+     {selectedJob && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md">
+              <h2 className="text-xl font-bold">{selectedJob.title}</h2>
+              <p className="text-gray-700 dark:text-gray-300">{selectedJob.company}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedJob.postDate}</p>
+              <p className="mt-2">{selectedJob.description}</p>
+              <p className="mt-2"><strong>Salary:</strong> {selectedJob.salaryRange}</p>
+              <p className="mt-2"><strong>Job Type:</strong> {selectedJob.jobType}</p>
+              <button className="mt-4 bg-red-500 text-white px-4 py-2 rounded" onClick={() => setSelectedJob(null)}>Close</button>
+            </div>
+          </div>
         )}
       </div>
     </div>

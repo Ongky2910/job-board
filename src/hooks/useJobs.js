@@ -219,24 +219,21 @@ const handleUnapplyJob = async (jobId) => {
     return;
   }
 
-  setIsUnapplying(true);
-  const prevAppliedJobs = [...appliedJobs]; 
+  // Optimistic update: Hapus dari UI sebelum request API
   setAppliedJobs((prevJobs) => prevJobs.filter((job) => job._id !== jobId));
-  setJobsAppliedCount((prevCount) => Math.max(prevCount - 1, 0));
-  forceUpdate();
-  
+
   try {
     await axios.delete(`${BASE_URL}/api/jobs/${jobId}/unapply`, { withCredentials: true });
     toast.success("✅ Job unapplied successfully!", { autoClose: 3000 });
+
+    // Fetch ulang data setelah berhasil unapply
+    fetchAppliedJobs();
   } catch (error) {
     console.error("❌ Error unapplying job:", error);
     toast.error(`❌ Failed to unapply: ${error.response?.data?.message || "Please try again."}`);
-    
-    // Rollback hanya jika error terjadi
-    setAppliedJobs(prevAppliedJobs);
-    setJobsAppliedCount(prevAppliedJobs.length);
-  } finally {
-    setIsUnapplying(false);
+
+    // Jika gagal, fetch ulang untuk menghindari inkonsistensi data
+    fetchAppliedJobs();
   }
 };
 
