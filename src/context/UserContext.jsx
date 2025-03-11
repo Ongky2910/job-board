@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
+import { toast } from "react-toastify";
 const UserContext = createContext();
 export const useUser = () => useContext(UserContext);
 
@@ -132,8 +132,10 @@ export const UserProvider = ({ children }) => {
       setUser(null);
       localStorage.removeItem("accessToken");
       delete axios.defaults.headers.common["Authorization"];
+
+      toast.success("Logout successful! 👋");
       console.log("✅ User logged out successfully!");
-      setIsUserLoading(false);
+     
       navigate("/login");
     } catch (error) {
       console.error("❌ Logout failed:", error);

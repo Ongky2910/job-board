@@ -59,7 +59,7 @@ export default function Dashboard() {
   }, [user?.id, isUserLoading]);
   
   const removeSavedJob = async (id) => {
-    console.log("Received job ID:", req.params.id);
+    console.log("Job ID:", id); 
     if (!id) {
       toast.error("Invalid job ID");
       return;
