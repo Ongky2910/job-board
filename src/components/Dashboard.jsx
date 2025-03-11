@@ -43,6 +43,7 @@ export default function Dashboard() {
           withCredentials: true,
         });
   
+        console.log("Fetched user data:", userRes.data.user);
         if (userRes?.data?.user) {
           setUserData(userRes.data.user);
           setSavedJobs(userRes.data.user.savedJobs ?? []);
@@ -127,7 +128,7 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold">{job.title}</h3>
                   <p className="text-gray-600 dark:text-gray-400">{job.company}</p>
                 </div>
-                <button onClick={() => removeSavedJob(job._id)} className="text-red-500 hover:text-red-700 bg-transparent">
+                <button onClick={() => removeSavedJob(job._id)} className="text-red-500 hover:text-red-700 bg-transparent dark:bg-transparent dark:text-red-500 dark:hover:text-red-800">
                   <Trash2 size={20} />
                 </button>
               </motion.li>
