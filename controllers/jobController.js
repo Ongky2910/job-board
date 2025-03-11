@@ -160,21 +160,26 @@ const removeSavedJob = async (req, res) => {
     const jobId = req.params.id;
     const userId = req.user.id;
 
-    console.log("Checking for SavedJob with:", { userId, jobId });
-    
-    // Hapus data dari collection/table SavedJobs
-    const deletedJob = await SavedJob.findOneAndDelete({ userId, jobId });
+    console.log("Checking for saved job with:", { userId, jobId });
 
-    if (!deletedJob) {
+    // Hapus user dari array savedUsers di model Job
+    const updatedJob = await Job.findByIdAndUpdate(
+      jobId,
+      { $pull: { savedUsers: userId }, $inc: { saveCount: -1 } }, // Kurangi saveCount
+      { new: true }
+    );
+
+    if (!updatedJob) {
       return res.status(404).json({ message: "Saved job not found" });
     }
 
-    res.json({ message: "Job removed from saved" });
+    res.json({ message: "Job removed from saved successfully", job: updatedJob });
   } catch (error) {
     console.error("Error removing saved job:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 const restoreJob = async (req, res) => {
   try {
