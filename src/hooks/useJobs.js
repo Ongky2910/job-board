@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useReducer } from "react";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
 import { toast } from "react-toastify";
@@ -29,6 +29,8 @@ const useJobs = () => {
   const [jobsAppliedCount, setJobsAppliedCount] = useState(0);
   const [jobsSavedCount, setJobsSavedCount] = useState(0);
   const [savedJobs, setSavedJobs] = useState([]);
+  const [isUnapplying, setIsUnapplying] = useState(false);
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
   const [totalJobs, setTotalJobs] = useState(0);
 
   // ✅ Memoization untuk parameter request
@@ -58,16 +60,21 @@ const useJobs = () => {
       const response = await axios.get(`${BASE_URL}/api/jobs/applied`, {
         withCredentials: true,
       });
-      console.log("Fetched applied jobs:", response.data);
-
-      const fetchedAppliedJobs = response.data || [];
-      setAppliedJobs(fetchedAppliedJobs);
   
-      console.log("Fetched applied jobs:", fetchedAppliedJobs);
+      const fetchedAppliedJobs = response.data || [];
+      console.log("✅ Applied jobs fetched:", fetchedAppliedJobs);
+  
+      setAppliedJobs(fetchedAppliedJobs); // ⬅️ Set state lebih awal
+  
+      // Setelah state terupdate, hitung jumlahnya
+      setJobsAppliedCount(fetchedAppliedJobs.length);
+  
+      console.log("✅ Updated jobsAppliedCount:", fetchedAppliedJobs.length);
     } catch (error) {
       console.error("❌ Error fetching applied jobs:", error);
     }
   }, [user?.id]);
+  
   
   const fetchUserJobCounts = useCallback(async () => {
     if (!user?.id) return;
@@ -192,30 +199,47 @@ const handleApplyJob = async (jobId) => {
   }
 
   try {
-    // Kirim request apply job
     await axios.post(`${BASE_URL}/api/jobs/${jobId}/apply`, {}, { withCredentials: true });
 
-    // Update appliedJobs langsung
-    setAppliedJobs((prevAppliedJobs) => {
-      const updatedAppliedJobs = [...prevAppliedJobs, { _id: jobId }];
-      console.log("Updated appliedJobs state:", updatedAppliedJobs); // ✅ Debug log
-      return updatedAppliedJobs;
-    });
+    setAppliedJobs((prevAppliedJobs) => [...prevAppliedJobs, { _id: jobId }]);
+    setJobsAppliedCount((prevCount) => prevCount + 1);
 
-    setJobs((prevJobs) =>
-      prevJobs.map((job) =>
-        job._id === jobId || job.id === jobId ? { ...job, isApplied: true } : job
-      )
-    );
+    await fetchAppliedJobs(); // 🔄 Ambil ulang applied jobs
 
-    // Call fetchAppliedJobs to get the latest applied jobs after applying for a job
-    fetchAppliedJobs(); // Refresh applied jobs to make sure the count is accurate
     toast.success("📩 Successfully applied for the job!", { autoClose: 3000 });
   } catch (error) {
     console.error("❌ Error applying for job:", error);
     toast.error(`❌ Failed to apply: ${error.response?.data?.message || "Please try again."}`);
   }
 };
+
+const handleUnapplyJob = async (jobId) => {
+  if (!user) {
+    toast.warning("⚠️ Please login first!", { autoClose: 3000 });
+    return;
+  }
+
+  setIsUnapplying(true);
+  const prevAppliedJobs = [...appliedJobs]; 
+  setAppliedJobs((prevJobs) => prevJobs.filter((job) => job._id !== jobId));
+  setJobsAppliedCount((prevCount) => Math.max(prevCount - 1, 0));
+  forceUpdate();
+  
+  try {
+    await axios.delete(`${BASE_URL}/api/jobs/${jobId}/unapply`, { withCredentials: true });
+    toast.success("✅ Job unapplied successfully!", { autoClose: 3000 });
+  } catch (error) {
+    console.error("❌ Error unapplying job:", error);
+    toast.error(`❌ Failed to unapply: ${error.response?.data?.message || "Please try again."}`);
+    
+    // Rollback hanya jika error terjadi
+    setAppliedJobs(prevAppliedJobs);
+    setJobsAppliedCount(prevAppliedJobs.length);
+  } finally {
+    setIsUnapplying(false);
+  }
+};
+
 
 
   // ✅ Hapus pekerjaan dari daftar yang disimpan
@@ -242,12 +266,12 @@ const handleApplyJob = async (jobId) => {
 
   // ✅ Efek samping untuk fetch data saat ada perubahan user atau filter
   useEffect(() => {
-    if (!isUserLoading && user?.id) {
+    if (!isUserLoading && user?.id && !isUnapplying) {
       fetchJobs();
       fetchAppliedJobs();  
       fetchSavedJobs();  
     }
-  }, [user?.id, currentPage, fetchJobs, fetchAppliedJobs, fetchSavedJobs, isUserLoading]);
+  }, [user?.id, currentPage, fetchJobs, fetchAppliedJobs, fetchSavedJobs, isUserLoading, isUnapplying]);
   
   useEffect(() => {
     setJobsAppliedCount(appliedJobs.length);  
@@ -270,6 +294,7 @@ const handleApplyJob = async (jobId) => {
     setCurrentPage,
     handleSaveJob,
     handleApplyJob,
+    handleUnapplyJob,
     handleRemoveSavedJob,
     resetFilters,
     jobsAppliedCount,
