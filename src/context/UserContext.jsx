@@ -135,7 +135,7 @@ export const UserProvider = ({ children }) => {
 
       toast.success("Logout successful! 👋");
       console.log("✅ User logged out successfully!");
-     
+      setIsUserLoading(false);
       navigate("/login");
     } catch (error) {
       console.error("❌ Logout failed:", error);

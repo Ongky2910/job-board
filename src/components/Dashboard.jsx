@@ -7,6 +7,7 @@ import { Trash2 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
+import JobDetail from "./JobDetail";
 
 axios.defaults.withCredentials = true;
 
@@ -22,10 +23,19 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [savedJobs, setSavedJobs] = useState([]);
   const [appliedJobs, setAppliedJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
+const [selectedJob, setSelectedJob] = useState(null);
   const [error, setError] = useState(null);
   const API_BASE_URL =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+
+
+  const openJobDetail = (job) => {
+    setSelectedJob(job);
+  };
+
+  const closeJobDetail = () => {
+    setSelectedJob(null);
+  };
 
   useEffect(() => {
     if (isUserLoading || !user?.id) return;
