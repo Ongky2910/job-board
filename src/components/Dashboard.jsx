@@ -69,7 +69,7 @@ export default function Dashboard() {
       await axios.delete(`${API_BASE_URL}/api/jobs/saved/${id}`, {
         withCredentials: true,
       });
-      setSavedJobs((prev) => prev.filter((job) => job.id !== id));
+      setSavedJobs((prev) => prev.filter((job) => job._id !== id));
       toast.success("Job removed from saved!");
     } catch (error) {
       console.error("Error removing job:", error);
