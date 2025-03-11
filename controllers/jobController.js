@@ -152,6 +152,7 @@ const deleteJob = async (req, res) => {
 
 const removeSavedJob = async (req, res) => {
   console.log("Received job ID:", req.params.id);
+
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized: Please log in" });
@@ -162,23 +163,41 @@ const removeSavedJob = async (req, res) => {
 
     console.log("Checking for saved job with:", { userId, jobId });
 
-    // Hapus user dari array savedUsers di model Job
+    // Pastikan job ada
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    // Hapus user dari array savedUsers di Job model
     const updatedJob = await Job.findByIdAndUpdate(
       jobId,
-      { $pull: { savedUsers: userId }, $inc: { saveCount: -1 } }, // Kurangi saveCount
+      { $pull: { savedUsers: userId }, $inc: { saveCount: -1 } },
       { new: true }
     );
 
-    if (!updatedJob) {
+    // Hapus job dari `savedJobs` di User model
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedJobs: jobId } },
+      { new: true }
+    );
+
+    if (!updatedJob || !updatedUser) {
       return res.status(404).json({ message: "Saved job not found" });
     }
 
-    res.json({ message: "Job removed from saved successfully", job: updatedJob });
+    res.json({
+      message: "Job removed from saved successfully",
+      job: updatedJob,
+      user: updatedUser,
+    });
   } catch (error) {
     console.error("Error removing saved job:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 
 const restoreJob = async (req, res) => {
