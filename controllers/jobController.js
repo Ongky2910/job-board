@@ -267,14 +267,21 @@ const applyJob = asyncHandler(async (req, res) => {
     user.appliedJobs.push(jobId);
     job.applyCount += 1;
 
+    // 🔥 Update jumlah applied jobs di user
+    user.jobApplied = user.appliedJobs.length;
+
     // Simpan perubahan ke database
     await job.save();
     await user.save();
 
-    // Kirimkan respon sukses
-    return res.status(200).json({ message: "Job applied successfully" });
+    // Kirimkan respon sukses dengan data terbaru
+    return res.status(200).json({
+      message: "Job applied successfully",
+      jobApplied: user.jobApplied, // ✅ Kirim jobApplied yang diperbarui
+      appliedJobs: user.appliedJobs, // ✅ Kirim daftar appliedJobs terbaru
+    });
   } catch (error) {
-    console.error(error);  // Log error ke console untuk debugging
+    console.error(error); // Log error ke console untuk debugging
 
     // Kirimkan error internal server jika terjadi kesalahan lainnya
     res.status(500).json({ message: "Internal server error" });

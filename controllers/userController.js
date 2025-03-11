@@ -12,15 +12,16 @@ const getUserDashboard = asyncHandler(async (req, res) => {
     })
     .populate({
       path: "appliedJobs",
-      match: { deleted: false } // Filter pekerjaan yang dihapus
+      match: { deleted: false }, // Filter pekerjaan yang dihapus
+      populate: { path: "postedBy", select: "name email" },
     });
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
 
-  const appliedJobs = await Job.find({ appliedBy: userId, deleted: false });
-  console.log("Applied Jobs Count:", appliedJobs);
+  const appliedJobs = user.appliedJobs || [];
+  console.log("Applied Jobs Count:", appliedJobs.length);
 
   const savedJobs = user.savedJobs || [];
 
