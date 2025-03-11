@@ -12,6 +12,7 @@ const {
   restoreJob, 
   applyJob, 
   getAppliedJobs, 
+  unapplyJob,
   saveJob, 
   getSavedJobs, 
   getExternalJobListings 
@@ -51,6 +52,8 @@ router.delete("/saved/:id", protect, removeSavedJob);
 // Mendapatkan daftar job yang telah dilamar & disimpan user
 router.get("/applied", protect, getAppliedJobs);
 router.get("/saved", protect, getSavedJobs);
+
+router.delete("/:id/unapply", protect, unapplyJob);
 
 // Mendapatkan daftar pekerjaan dari API eksternal
 router.get("/external-jobs", protect, getExternalJobListings);

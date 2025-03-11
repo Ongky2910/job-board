@@ -199,7 +199,6 @@ const removeSavedJob = async (req, res) => {
 };
 
 
-
 const restoreJob = async (req, res) => {
   try {
     console.log("Restore Job Hit!");
@@ -312,6 +311,49 @@ const getAppliedJobs = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+const unapplyJob = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const jobId = req.params.id;
+
+    console.log(`User ID: ${userId}, Job ID: ${jobId}`);
+
+    const user = await User.findById(userId);
+    const job = await Job.findById(jobId);
+
+    if (!user || !job) {
+      console.log("User or Job not found");
+      return res.status(404).json({ message: "User or Job not found" });
+    }
+
+    // Cek apakah user memang sudah apply job ini
+    if (!job.appliedUsers.includes(userId)) {
+      console.log("User has not applied for this job");
+      return res.status(400).json({ message: "You have not applied for this job" });
+    }
+
+    // Hapus user dari appliedUsers di Job
+    job.appliedUsers = job.appliedUsers.filter(id => id.toString() !== userId);
+    job.applyCount -= 1;
+
+    // Hapus job dari appliedJobs di User
+    user.appliedJobs = user.appliedJobs.filter(id => id.toString() !== jobId);
+
+    console.log("Before Saving: ", { job, user });
+
+    await job.save();
+    await user.save();
+
+    console.log("Job unapplied successfully");
+
+    return res.status(200).json({ message: "Job unapplied successfully" });
+  } catch (error) {
+    console.error("Error unapplying job:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 
 
 // ✅ Menyimpan pekerjaan ke daftar favorit
@@ -501,6 +543,7 @@ module.exports = {
   restoreJob,
   applyJob,
   getAppliedJobs,
+  unapplyJob,
   saveJob,
   getSavedJobs,
   getExternalJobListings,
