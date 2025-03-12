@@ -17,6 +17,7 @@ const EditProfile = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   const validateInput = (name, value) => {
     let error = "";
@@ -41,7 +42,6 @@ const EditProfile = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData((prev) => ({ ...prev, [name]: value }));
-    validateInput(name, value);
   };
 
   const handleImageChange = (e) => {
@@ -59,6 +59,12 @@ const EditProfile = () => {
       formData.append(key, userData[key]);
     });
     dispatch(updateProfile(formData));
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    validateInput(name, value);
   };
 
   const isFormValid =
@@ -108,8 +114,11 @@ const EditProfile = () => {
               onChange={handleChange}
               className="border border-gray-300 p-2 rounded w-full"
               placeholder="New Email"
+              onBlur={handleBlur}
             />
-            {errors.email && <p className="text-red-500">{errors.email}</p>}
+            {touched.email && errors.email && (
+              <p className="text-red-500">{errors.email}</p>
+            )}
           </div>
         </div>
 
@@ -125,14 +134,16 @@ const EditProfile = () => {
               value={userData.oldPassword}
               onChange={handleChange}
               className="border border-gray-300 p-2 rounded w-full pr-10 dark:text-slate-950"
+              onBlur={handleBlur}
             />
-            {errors.oldPassword && (
+            {touched.oldPassword && errors.oldPassword && (
               <p className="text-red-500">{errors.oldPassword}</p>
             )}
             <button
               type="button"
               className="absolute inset-y-0 right-3 top-5 flex items-center dark:bg-transparent text-gray-700"
               onClick={() => setShowOldPassword(!showOldPassword)}
+              onBlur={handleBlur}
             >
               {showOldPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
@@ -149,8 +160,9 @@ const EditProfile = () => {
               value={userData.newPassword}
               onChange={handleChange}
               className="border border-gray-300 p-2 rounded w-full pr-10 dark:text-slate-950"
+              onBlur={handleBlur}
             />
-            {errors.newPassword && (
+            {touched.newPassword && errors.newPassword && (
               <p className="text-red-500">{errors.newPassword}</p>
             )}
             <button
@@ -172,8 +184,11 @@ const EditProfile = () => {
             value={userData.contact}
             onChange={handleChange}
             className="border border-gray-300 p-2 rounded w-full"
+            onBlur={handleBlur}
           />
-          {errors.contact && <p className="text-red-500">{errors.contact}</p>}
+          {touched.contact && errors.contact && (
+            <p className="text-red-500">{errors.contact}</p>
+          )}
         </div>
 
         {/* Submit Button */}
