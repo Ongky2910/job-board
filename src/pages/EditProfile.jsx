@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateProfile } from "../redux/slices/userSlice";
-import { Eye, EyeOff, Trash } from "lucide-react";
+import { Eye, EyeOff, Trash, Upload } from "lucide-react";
 
 const EditProfile = () => {
   const dispatch = useDispatch();
@@ -77,7 +77,9 @@ const EditProfile = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Edit Profile</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
+        Edit Profile
+      </h2>
       {error && <p className="text-red-500 text-center">{error}</p>}
       {loading && <p className="text-gray-500 text-center">Updating...</p>}
 
@@ -96,15 +98,20 @@ const EditProfile = () => {
             </div>
           )}
 
-          <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600">
+          <label
+            htmlFor="avatar"
+            className="flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-md cursor-pointer hover:bg-blue-600 hover:text-white transition"
+          >
+            <Upload size={18} />
             Upload Avatar
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageChange}
-            />
           </label>
+          <input
+            id="avatar"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="hidden"
+          />
 
           {userData.profilePicture && (
             <button
@@ -210,7 +217,10 @@ const EditProfile = () => {
 
         {/* Kontak */}
         <div>
-          <label className="block font-medium mt-5 text-gray-900"> Add+ Contact</label>
+          <label className="block font-medium mt-5 text-gray-900">
+            {" "}
+            Add+ Contact
+          </label>
           <input
             type="text"
             name="contact"
