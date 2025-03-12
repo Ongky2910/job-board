@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const Job = require("../models/Job");
 const asyncHandler = require("express-async-handler");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 
 // Fungsi untuk mendapatkan dashboard pengguna
 const getUserDashboard = asyncHandler(async (req, res) => {
