@@ -131,7 +131,6 @@ export const UserProvider = ({ children }) => {
         console.log("📌 User state updated:", response.data.user);
         toast.success("Login successful!");
 
-        
         console.log("Navigating to home...");
         navigate("/home");
         
