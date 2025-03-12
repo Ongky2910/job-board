@@ -9,7 +9,7 @@ export const updateProfile = createAsyncThunk(
   "user/updateProfile",
   async (formData, { rejectWithValue }) => {
     try {
-      const res = await axios.put("/api/user/update-profile", formData, {
+      const res = await axios.put("/api/auth/update-profile", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         withCredentials: true,
       });

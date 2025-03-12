@@ -33,18 +33,15 @@ export default function Login() {
     }
 
     try {
-      // Pastikan data dikirim dengan benar sesuai dengan API backend
-      await loginUser(formData.email, formData.password);
-      toast.success("Login successful!", { autoClose: 1500 });
-      navigate("/");
+      const user = await loginUser(formData.email, formData.password);
+      if (user) {
+        toast.success("Login successful!", { autoClose: 1500 });
+        navigate("/");
+      }
     } catch (error) {
-      console.error("❌ Login Error:", error.response?.data || error.message);
-
-      const errorMessage =
-        error.response?.data?.message || "Email or password is incorrect.";
-
-      setError(errorMessage);
-      toast.error(`❌ ${errorMessage}`, { autoClose: 2000 });
+      console.error("❌ Login Error:", error.message);
+      setError(error.message);
+      toast.error(`❌ ${error.message}`, { autoClose: 2000 });
     } finally {
       setLoading(false);
     }

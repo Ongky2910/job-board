@@ -30,31 +30,45 @@ export const UserProvider = ({ children }) => {
       if (response.data.token) {
         console.log("✅ New token received:", response.data.token);
         localStorage.setItem("accessToken", response.data.token);
-        api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+        api.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${response.data.token}`;
         return response.data.token;
       }
     } catch (error) {
       console.error("❌ Refresh token failed:", error);
+      logoutUser(); // Jika refresh token gagal, logout
       return null;
     }
   };
 
   // ✅ Interceptor untuk menangani token expired
   useEffect(() => {
-    api.interceptors.response.use(
-      (response) => response,
+    const interceptor = api.interceptors.response.use(
+      (response) => response, // Jika response berhasil
       async (error) => {
         if (error.response?.status === 401) {
           console.warn("🔄 Token expired! Refreshing...");
+          const storedToken = localStorage.getItem("accessToken");
+
+          if (!storedToken) {
+            console.warn("⚠️ No token found, forcing logout.");
+            logoutUser(); // Jika tidak ada token, logout
+            return Promise.reject(error);
+          }
+
           const newAccessToken = await refreshToken();
           if (newAccessToken) {
+            // Jika token baru berhasil didapatkan, ulang request dengan token baru
             error.config.headers["Authorization"] = `Bearer ${newAccessToken}`;
-            return api(error.config); // Ulangi request dengan token baru
+            return api(error.config);
           }
         }
-        return Promise.reject(error);
+        return Promise.reject(error); // Jika tidak ada penanganan untuk 401, lanjutkan error
       }
     );
+
+    return () => api.interceptors.response.eject(interceptor);
   }, []);
 
   // ✅ Cek autentikasi saat pertama kali load
@@ -65,13 +79,9 @@ export const UserProvider = ({ children }) => {
       let accessToken = localStorage.getItem("accessToken");
 
       if (!accessToken) {
-        console.warn("⚠️ No access token found. Attempting refresh...");
-        accessToken = await refreshToken();
-      }
-
-      if (!accessToken) {
-        console.error("❌ No valid token found, logging out...");
-        return logoutUser();
+        console.warn("⚠️ No access token found. Skipping authentication check.");
+        setIsUserLoading(false);
+        return;
       }
 
       console.log("📌 Using token:", accessToken);
@@ -79,10 +89,16 @@ export const UserProvider = ({ children }) => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      console.log("✅ User authenticated:", response.data);
-      setUser(response.data.user || null);
+      if (response.data.user) {
+        console.log("✅ User authenticated:", response.data.user);
+        setUser(response.data.user || null);
+      } else {
+        console.warn("⚠️ User not authenticated.");
+        logoutUser();
+      }
     } catch (error) {
       console.error("❌ Authentication error:", error);
+      logoutUser(); // Jika ada error, logout
     } finally {
       setIsUserLoading(false);
     }
@@ -101,21 +117,21 @@ export const UserProvider = ({ children }) => {
       console.log("🟢 Logging in...", email);
       const response = await api.post("/api/auth/login", { email, password });
 
-      console.log("✅ Login Response:", response.data);
-
       if (response.data.user) {
-        console.log("👤 User logged in:", response.data.user);
+        console.log("✅ User logged in:", response.data.user);
         setUser(response.data.user);
-        await refreshToken();
+        localStorage.setItem("accessToken", response.data.token); 
+        api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
         return response.data.user;
       } else {
-        console.error("❌ User data not found in response!");
         setError("Invalid response from server");
         return null;
       }
     } catch (error) {
       console.error("❌ Login Error:", error.response?.data || error.message);
-      setError(error.response?.data?.message || "Login failed, please try again.");
+      setError(
+        error.response?.data?.message || "Login failed, please try again."
+      );
       return null;
     } finally {
       setIsUserLoading(false);
@@ -130,13 +146,12 @@ export const UserProvider = ({ children }) => {
       setUser(null);
       localStorage.removeItem("accessToken");
       delete api.defaults.headers.common["Authorization"];
-
       toast.success("Logout successful! 👋");
-      console.log("✅ User logged out successfully!");
-      setIsUserLoading(false);
       navigate("/login");
     } catch (error) {
       console.error("❌ Logout failed:", error);
+    } finally {
+      setIsUserLoading(false);
     }
   };
 
