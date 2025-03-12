@@ -33,6 +33,10 @@ const EditProfile = () => {
       if (!phoneRegex.test(value)) error = "Invalid phone number!";
     }
     setErrors((prev) => ({ ...prev, [name]: error }));
+
+    if (name === "newPassword" && value === userData.oldPassword) {
+      error = "New password cannot be the same as old password!";
+    }
   };
 
   const [previewImage, setPreviewImage] = useState(null);
@@ -124,7 +128,7 @@ const EditProfile = () => {
 
         <div className="grid grid-cols-2 gap-4">
           {/* Old Password */}
-          <div className="relative">
+          <div className="relative min-h-[65px]">
             <label className="block font-medium text-gray-900">
               Old Password
             </label>
@@ -137,7 +141,9 @@ const EditProfile = () => {
               onBlur={handleBlur}
             />
             {touched.oldPassword && errors.oldPassword && (
-              <p className="text-red-500">{errors.oldPassword}</p>
+              <p className="text-red-500 text-sm absolute left-0 top-full whitespace-nowrap">
+                {errors.oldPassword}
+              </p>
             )}
             <button
               type="button"
@@ -163,7 +169,9 @@ const EditProfile = () => {
               onBlur={handleBlur}
             />
             {touched.newPassword && errors.newPassword && (
-              <p className="text-red-500">{errors.newPassword}</p>
+              <p className="text-red-500 text-sm absolute left-0 top-full whitespace-nowrap">
+                {errors.newPassword}
+              </p>
             )}
             <button
               type="button"
@@ -177,13 +185,14 @@ const EditProfile = () => {
 
         {/* Kontak */}
         <div>
-          <label className="block font-medium">Contact</label>
+          <label className="block font-medium mt-5"> Add+ Contact</label>
           <input
             type="text"
             name="contact"
             value={userData.contact}
             onChange={handleChange}
             className="border border-gray-300 p-2 rounded w-full"
+            placeholder="Enter your phone number"
             onBlur={handleBlur}
           />
           {touched.contact && errors.contact && (
