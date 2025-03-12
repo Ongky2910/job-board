@@ -9,8 +9,9 @@ export const updateProfile = createAsyncThunk(
   "user/updateProfile",
   async (formData, { rejectWithValue }) => {
     try {
-      const res = await axios.patch("/api/users/profile", formData, {
+      const res = await axios.put("/api/user/update-profile", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
       });
       return res.data;
     } catch (err) {
@@ -22,18 +23,16 @@ export const updateProfile = createAsyncThunk(
 const userSlice = createSlice({
   name: "user",
   initialState: {
-    user: storedUser,
+    user: null,
     loading: false,
     error: null,
   },
   reducers: {
     setUser: (state, action) => {
       state.user = action.payload;
-      localStorage.setItem("user", JSON.stringify(action.payload)); // Simpan ke localStorage
     },
     logoutUser: (state) => {
       state.user = null;
-      localStorage.removeItem("user");
     },
     resetError: (state) => {
       state.error = null;
@@ -48,7 +47,6 @@ const userSlice = createSlice({
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
-        localStorage.setItem("user", JSON.stringify(action.payload)); 
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;
