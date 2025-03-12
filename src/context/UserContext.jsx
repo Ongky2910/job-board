@@ -77,18 +77,18 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🔍 Checking authentication...");
       let accessToken = localStorage.getItem("accessToken");
-
+  
       if (!accessToken) {
         console.warn("⚠️ No access token found. Skipping authentication check.");
         setIsUserLoading(false);
         return;
       }
-
+  
       console.log("📌 Using token:", accessToken);
       const response = await api.get("/api/auth/verify-token", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-
+  
       if (response.data.user) {
         console.log("✅ User authenticated:", response.data.user);
         setUser(response.data.user || null);
@@ -116,12 +116,22 @@ export const UserProvider = ({ children }) => {
     try {
       console.log("🟢 Logging in...", email);
       const response = await api.post("/api/auth/login", { email, password });
-
+  
       if (response.data.user) {
         console.log("✅ User logged in:", response.data.user);
+  
+        // Menyimpan user di state
         setUser(response.data.user);
-        localStorage.setItem("accessToken", response.data.token); 
+        localStorage.setItem("accessToken", response.data.token);
         api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+        
+        // Pastikan user data ter-update
+        console.log("📌 User state updated:", response.data.user);
+        toast.success("Login successful!");
+
+        console.log("Navigating to home...");
+        navigate("/home");
+        
         return response.data.user;
       } else {
         setError("Invalid response from server");
@@ -129,14 +139,13 @@ export const UserProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("❌ Login Error:", error.response?.data || error.message);
-      setError(
-        error.response?.data?.message || "Login failed, please try again."
-      );
+      setError(error.response?.data?.message || "Login failed, please try again.");
       return null;
     } finally {
       setIsUserLoading(false);
     }
   };
+  
 
   // ✅ Fungsi Logout
   const logoutUser = async () => {
