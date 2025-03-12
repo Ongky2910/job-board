@@ -28,6 +28,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Logout from "./components/Logout";
 import Dashboard from "./components/Dashboard";
+import EditProfile from "./pages/EditProfile";
 
 // Theme Context
 const ThemeContext = createContext();
@@ -98,7 +99,7 @@ const AppContent = () => {
             <Route path="/register" element={<Register />} />
             <Route path="/logout" element={<Logout />} />
 
-            {/* Private Route for Dashboard */}
+          
             {/* ✅ PrivateRoute untuk halaman yang butuh login */}
             <Route path="/" element={<PrivateRoute />}>
               <Route
@@ -117,7 +118,7 @@ const AppContent = () => {
               />
               <Route path="saved-jobs" element={<SavedJobs />} />
             </Route>
-
+            <Route path="edit-profile" element={<EditProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
