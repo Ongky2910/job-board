@@ -64,31 +64,45 @@ const EditProfile = () => {
         <div className="grid grid-cols-2 gap-4">
           {/* Nama */}
           <div>
-            <label className="block font-medium">Username</label>
-            <input type="text" name="username" value={userData.username} onChange={handleChange} className="border border-gray-300 p-2 rounded w-full" placeholder="New Username" />
+            <label className="block font-medium text-gray-900">Username</label>
+            <input
+              type="text"
+              name="username"
+              value={userData.username}
+              onChange={handleChange}
+              className="border border-gray-300 p-2 rounded w-full"
+              placeholder="New Username"
+            />
           </div>
 
           {/* Email */}
           <div>
-            <label className="block font-medium">Email</label>
-            <input type="email" name="email" value={userData.email} onChange={handleChange} className="border border-gray-300 p-2 rounded w-full" placeholder="New Email" />
+            <label className="block font-medium text-gray-900">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={userData.email}
+              onChange={handleChange}
+              className="border border-gray-300 p-2 rounded w-full"
+              placeholder="New Email"
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           {/* Old Password */}
           <div className="relative">
-            <label className="block font-medium">Old Password</label>
+            <label className="block font-medium text-gray-900">Old Password</label>
             <input
               type={showOldPassword ? "text" : "password"}
               name="oldPassword"
               value={userData.oldPassword}
               onChange={handleChange}
-              className="border border-gray-300 p-2 rounded w-full pr-10"
+              className="border border-gray-300 p-2 rounded w-full pr-10 dark:text-slate-950"
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-3 flex items-center"
+            className="absolute inset-y-0 right-3 top-5 flex items-center dark:bg-transparent text-gray-700"
               onClick={() => setShowOldPassword(!showOldPassword)}
             >
               {showOldPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -97,17 +111,17 @@ const EditProfile = () => {
 
           {/* New Password */}
           <div className="relative">
-            <label className="block font-medium">New Password</label>
+            <label className="block font-medium text-gray-900">New Password</label>
             <input
               type={showNewPassword ? "text" : "password"}
               name="newPassword"
               value={userData.newPassword}
               onChange={handleChange}
-              className="border border-gray-300 p-2 rounded w-full pr-10"
+              className="border border-gray-300 p-2 rounded w-full pr-10 dark:text-slate-950"
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-3 flex items-center"
+               className="absolute inset-y-0 right-3 top-5 flex items-center dark:bg-transparent text-gray-700"
               onClick={() => setShowNewPassword(!showNewPassword)}
             >
               {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -118,10 +132,20 @@ const EditProfile = () => {
         {/* Kontak */}
         <div>
           <label className="block font-medium">Contact</label>
-          <input type="text" name="contact" value={userData.contact} onChange={handleChange} className="border border-gray-300 p-2 rounded w-full" />
+          <input
+            type="text"
+            name="contact"
+            value={userData.contact}
+            onChange={handleChange}
+            className="border border-gray-300 p-2 rounded w-full"
+          />
         </div>
 
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded w-full transition duration-300" disabled={loading}>
+        <button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded w-full transition duration-300"
+          disabled={loading}
+        >
           {loading ? "Updating..." : "Update Profile"}
         </button>
       </form>
