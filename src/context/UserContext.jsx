@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+
 const UserContext = createContext();
 export const useUser = () => useContext(UserContext);
 
@@ -14,18 +15,22 @@ export const UserProvider = ({ children }) => {
 
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
+  // ✅ Buat instance axios dengan interceptor
+  const api = axios.create({
+    baseURL: API_URL,
+    withCredentials: true,
+  });
+
   // ✅ Fungsi Refresh Token (Memperbarui Access Token)
   const refreshToken = async () => {
     try {
       console.log("🔄 Refreshing token...");
-      const response = await axios.get(`${API_URL}/api/auth/refresh-token`, {
-        withCredentials: true,
-      });
+      const response = await api.get("/api/auth/refresh-token");
 
       if (response.data.token) {
-        console.log("✅ New token received");
+        console.log("✅ New token received:", response.data.token);
         localStorage.setItem("accessToken", response.data.token);
-        axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+        api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
         return response.data.token;
       }
     } catch (error) {
@@ -34,50 +39,55 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // ✅ Interceptor untuk menangani token expired
+  useEffect(() => {
+    api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401) {
+          console.warn("🔄 Token expired! Refreshing...");
+          const newAccessToken = await refreshToken();
+          if (newAccessToken) {
+            error.config.headers["Authorization"] = `Bearer ${newAccessToken}`;
+            return api(error.config); // Ulangi request dengan token baru
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+  }, []);
+
   // ✅ Cek autentikasi saat pertama kali load
   const checkAuth = async () => {
     setIsUserLoading(true);
     try {
       console.log("🔍 Checking authentication...");
       let accessToken = localStorage.getItem("accessToken");
-  
+
       if (!accessToken) {
         console.warn("⚠️ No access token found. Attempting refresh...");
         accessToken = await refreshToken();
       }
-  
+
       if (!accessToken) {
         console.error("❌ No valid token found, logging out...");
         return logoutUser();
       }
-  
+
       console.log("📌 Using token:", accessToken);
-      const response = await axios.get(`${API_URL}/api/auth/verify-token`, {
+      const response = await api.get("/api/auth/verify-token", {
         headers: { Authorization: `Bearer ${accessToken}` },
-        withCredentials: true,
       });
-  
+
       console.log("✅ User authenticated:", response.data);
-      if (response.data.user) {
-        setUser(response.data.user);
-      } else {
-        console.warn("⚠️ No user found in verify-token response!");
-        setUser(null);
-      }
+      setUser(response.data.user || null);
     } catch (error) {
-      if (error.response?.status === 401) {
-        console.warn("🔄 Token expired, trying to refresh...");
-        const newAccessToken = await refreshToken();
-        if (newAccessToken) {
-          return checkAuth();
-        }
-      }
       console.error("❌ Authentication error:", error);
     } finally {
       setIsUserLoading(false);
     }
   };
-  
+
   useEffect(() => {
     if (!["/register", "/login"].includes(window.location.pathname)) {
       checkAuth();
@@ -89,23 +99,14 @@ export const UserProvider = ({ children }) => {
     setIsUserLoading(true);
     try {
       console.log("🟢 Logging in...", email);
-      const response = await axios.post(
-        `${API_URL}/api/auth/login`,
-        { email, password },
-        { withCredentials: true }
-      );
-  
+      const response = await api.post("/api/auth/login", { email, password });
+
       console.log("✅ Login Response:", response.data);
-  
+
       if (response.data.user) {
         console.log("👤 User logged in:", response.data.user);
-  
-        // ⬇️ Set user langsung, tanpa harus menunggu token
         setUser(response.data.user);
-  
-        // 🔄 Coba refresh token karena token ada di cookies
         await refreshToken();
-  
         return response.data.user;
       } else {
         console.error("❌ User data not found in response!");
@@ -114,24 +115,21 @@ export const UserProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("❌ Login Error:", error.response?.data || error.message);
-      setError(
-        error.response?.data?.message || "Login failed, please try again."
-      );
+      setError(error.response?.data?.message || "Login failed, please try again.");
       return null;
     } finally {
       setIsUserLoading(false);
     }
   };
-  
 
   // ✅ Fungsi Logout
   const logoutUser = async () => {
     try {
       console.log("🚪 Logging out...");
-      await axios.post(`${API_URL}/api/auth/logout`, {}, { withCredentials: true });
+      await api.post("/api/auth/logout");
       setUser(null);
       localStorage.removeItem("accessToken");
-      delete axios.defaults.headers.common["Authorization"];
+      delete api.defaults.headers.common["Authorization"];
 
       toast.success("Logout successful! 👋");
       console.log("✅ User logged out successfully!");
