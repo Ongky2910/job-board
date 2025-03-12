@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateProfile } from "../redux/slices/userSlice";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Trash } from "lucide-react";
 
 const EditProfile = () => {
   const dispatch = useDispatch();
@@ -77,21 +77,46 @@ const EditProfile = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h2 className="text-2xl font-bold mb-6 text-center">Edit Profile</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Edit Profile</h2>
       {error && <p className="text-red-500 text-center">{error}</p>}
       {loading && <p className="text-gray-500 text-center">Updating...</p>}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
         {/* Foto Profil */}
         <div className="flex flex-col items-center gap-3">
-          {previewImage && (
+          {previewImage ? (
             <img
               src={previewImage}
               alt="Preview"
               className="w-24 h-24 rounded-full object-cover shadow-md"
             />
+          ) : (
+            <div className="w-24 h-24 flex items-center justify-center bg-gray-200 rounded-full shadow-md">
+              <span className="text-gray-500 text-sm">No Image</span>
+            </div>
           )}
-          <input type="file" accept="image/*" onChange={handleImageChange} />
+
+          <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600">
+            Upload Avatar
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+          </label>
+
+          {userData.profilePicture && (
+            <button
+              onClick={() => {
+                setUserData((prev) => ({ ...prev, profilePicture: "" }));
+                setPreviewImage(null);
+              }}
+              className=" text-red-500 hover:bg-red-100 p-2 rounded-full"
+            >
+              <Trash size={20} />
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -185,7 +210,7 @@ const EditProfile = () => {
 
         {/* Kontak */}
         <div>
-          <label className="block font-medium mt-5"> Add+ Contact</label>
+          <label className="block font-medium mt-5 text-gray-900"> Add+ Contact</label>
           <input
             type="text"
             name="contact"
