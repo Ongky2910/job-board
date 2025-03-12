@@ -16,6 +16,24 @@ const EditProfile = () => {
     contact: user?.contact || "",
   });
 
+  const [errors, setErrors] = useState({});
+
+  const validateInput = (name, value) => {
+    let error = "";
+    if (name === "email") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) error = "Invalid email format!";
+    }
+    if (name === "oldPassword" || name === "newPassword") {
+      if (value.length < 6) error = "Password must be at least 6 characters!";
+    }
+    if (name === "contact") {
+      const phoneRegex = /^[0-9]{10,}$/;
+      if (!phoneRegex.test(value)) error = "Invalid phone number!";
+    }
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
   const [previewImage, setPreviewImage] = useState(null);
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -23,6 +41,7 @@ const EditProfile = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData((prev) => ({ ...prev, [name]: value }));
+    validateInput(name, value);
   };
 
   const handleImageChange = (e) => {
@@ -41,6 +60,10 @@ const EditProfile = () => {
     });
     dispatch(updateProfile(formData));
   };
+
+  const isFormValid =
+    Object.values(errors).every((error) => error === "") &&
+    Object.values(userData).every((field) => field !== "");
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -62,7 +85,7 @@ const EditProfile = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* Nama */}
+          {/* Name */}
           <div>
             <label className="block font-medium text-gray-900">Username</label>
             <input
@@ -86,13 +109,16 @@ const EditProfile = () => {
               className="border border-gray-300 p-2 rounded w-full"
               placeholder="New Email"
             />
+            {errors.email && <p className="text-red-500">{errors.email}</p>}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           {/* Old Password */}
           <div className="relative">
-            <label className="block font-medium text-gray-900">Old Password</label>
+            <label className="block font-medium text-gray-900">
+              Old Password
+            </label>
             <input
               type={showOldPassword ? "text" : "password"}
               name="oldPassword"
@@ -100,9 +126,12 @@ const EditProfile = () => {
               onChange={handleChange}
               className="border border-gray-300 p-2 rounded w-full pr-10 dark:text-slate-950"
             />
+            {errors.oldPassword && (
+              <p className="text-red-500">{errors.oldPassword}</p>
+            )}
             <button
               type="button"
-            className="absolute inset-y-0 right-3 top-5 flex items-center dark:bg-transparent text-gray-700"
+              className="absolute inset-y-0 right-3 top-5 flex items-center dark:bg-transparent text-gray-700"
               onClick={() => setShowOldPassword(!showOldPassword)}
             >
               {showOldPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -111,7 +140,9 @@ const EditProfile = () => {
 
           {/* New Password */}
           <div className="relative">
-            <label className="block font-medium text-gray-900">New Password</label>
+            <label className="block font-medium text-gray-900">
+              New Password
+            </label>
             <input
               type={showNewPassword ? "text" : "password"}
               name="newPassword"
@@ -119,9 +150,12 @@ const EditProfile = () => {
               onChange={handleChange}
               className="border border-gray-300 p-2 rounded w-full pr-10 dark:text-slate-950"
             />
+            {errors.newPassword && (
+              <p className="text-red-500">{errors.newPassword}</p>
+            )}
             <button
               type="button"
-               className="absolute inset-y-0 right-3 top-5 flex items-center dark:bg-transparent text-gray-700"
+              className="absolute inset-y-0 right-3 top-5 flex items-center dark:bg-transparent text-gray-700"
               onClick={() => setShowNewPassword(!showNewPassword)}
             >
               {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -139,12 +173,16 @@ const EditProfile = () => {
             onChange={handleChange}
             className="border border-gray-300 p-2 rounded w-full"
           />
+          {errors.contact && <p className="text-red-500">{errors.contact}</p>}
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded w-full transition duration-300"
-          disabled={loading}
+          className={`bg-blue-600 text-white px-4 py-2 rounded ${
+            !isFormValid ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+          disabled={!isFormValid}
         >
           {loading ? "Updating..." : "Update Profile"}
         </button>
