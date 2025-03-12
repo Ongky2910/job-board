@@ -118,7 +118,7 @@ export const UserProvider = ({ children }) => {
       const response = await api.post("/api/auth/login", { email, password });
   
       console.log("Response from API:", response);
-      
+
       if (response.data.user) {
         console.log("✅ User logged in:", response.data.user);
   
@@ -131,6 +131,7 @@ export const UserProvider = ({ children }) => {
         console.log("📌 User state updated:", response.data.user);
         toast.success("Login successful!");
 
+        
         console.log("Navigating to home...");
         navigate("/home");
         
