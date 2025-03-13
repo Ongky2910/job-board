@@ -80,6 +80,9 @@ const loginUser = async (req, res) => {
 
   const { email, password } = req.body;
 
+  console.log("🔍 Login request received for email:", email);
+  console.log("🔍 Checking user existence...");
+
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
@@ -93,8 +96,10 @@ const loginUser = async (req, res) => {
       console.log("Password input:", password);
       console.log("Hashed password from DB:", user.password);
     } catch (error) {
-      console.error("Error comparing password:", error);  // Tangani error bcrypt secara langsung
-      return res.status(500).json({ message: "Error comparing password", error: error.message });
+      console.error("Error comparing password:", error);
+      return res
+        .status(500)
+        .json({ message: "Error comparing password", error: error.message });
     }
 
     console.log("Password valid:", isPasswordValid);
@@ -119,24 +124,33 @@ const loginUser = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", 
-      sameSite: "None", 
-      maxAge: 3600000, 
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 3600000,
     });
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
-      maxAge: 604800000, 
+      maxAge: 604800000,
     });
 
-    res.status(200).json({ message: "Login successful", token, refreshToken });
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      refreshToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profilePic: user.profilePic || "",
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 const verifyToken = async (req, res) => {
   try {
