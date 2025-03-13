@@ -30,7 +30,7 @@ const registerUser = async (req, res) => {
     const newUser = new User({
       displayName,
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password,
     });
     await newUser.save();
 
