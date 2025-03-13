@@ -1,61 +1,45 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "../context/UserContext";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../redux/slices/userSlice"; 
 import { toast } from "react-toastify";
-import { Eye, EyeOff, Menu, Briefcase } from "lucide-react";
+import { Eye, EyeOff, Briefcase } from "lucide-react";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { loginUser } = useUser();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const clearError = () => setError(null);
+
+  // Ambil state dari Redux
+  const { user, loading, error } = useSelector((state) => state.user);
 
   useEffect(() => {
-    clearError();
-  }, []);
+    console.log("🔍 Checking user state:", user); // Debug
+    if (user) {
+      toast.success("Login successful!", { autoClose: 1500 });
+      setTimeout(() => {
+        console.log("✅ Navigating to home..."); // Debug sebelum navigate
+        navigate("/");
+      }, 1500);
+    }
+  }, [user, navigate]);
+  
+  
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-
     if (!formData.email || !formData.password) {
-      setError("Please fill in all fields");
-      setLoading(false);
+      toast.warning("Please fill in all fields!", { autoClose: 2000 });
       return;
     }
 
-    try {
-      const user = await loginUser(formData.email, formData.password);
-      if (user) {
-        toast.success("Login successful!", { autoClose: 1500 });
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("❌ Login Error:", error.message);
-      setError(error.message);
-      toast.error(`❌ ${error.message}`, { autoClose: 2000 });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = () => {
-    if (!formData.email) {
-      toast.warning("Please enter your email first!", { autoClose: 2000 });
-      return;
-    }
-    // 🔹 TODO: Implementasi API reset password
-    toast.info("📩 Reset password link has been sent to your email!", {
-      autoClose: 2500,
-    });
+    // Dispatch loginUser dengan data dari form
+    dispatch(loginUser({ email: formData.email, password: formData.password }));
   };
 
   return (
@@ -68,6 +52,7 @@ export default function Login() {
           Login
         </h2>
         {error && <p className="text-red-500 text-center mt-2">{error}</p>}
+
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div>
             <input
@@ -98,6 +83,7 @@ export default function Login() {
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
+
           <div className="flex justify-between items-center">
             <button
               type="submit"
@@ -119,10 +105,7 @@ export default function Login() {
               Register
             </a>
           </span>
-          <button
-            onClick={handleForgotPassword}
-            className="text-gray-800 dark:text-gray-300 hover:underline bg-transparent dark:bg-transparent"
-          >
+          <button className="text-gray-800 dark:text-gray-300 hover:underline bg-transparent dark:bg-transparent">
             Forgot Password?
           </button>
         </div>
