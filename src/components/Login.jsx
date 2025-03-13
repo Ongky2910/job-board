@@ -15,11 +15,11 @@ export default function Login() {
   const { user, loading, error } = useSelector((state) => state.user);
 
   useEffect(() => {
-    console.log("🔍 Checking user state:", user); // Debug
+    console.log("🔍 Checking user state:", user); 
     if (user) {
       toast.success("Login successful!", { autoClose: 1500 });
       setTimeout(() => {
-        console.log("✅ Navigating to home..."); // Debug sebelum navigate
+        console.log("✅ Navigating to home..."); 
         navigate("/");
       }, 1500);
     }
@@ -51,7 +51,7 @@ export default function Login() {
         <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
           Login
         </h2>
-        {error && <p className="text-red-500 text-center mt-2">{error}</p>}
+        {error && <p className="text-red-500 text-center mt-2">{error.message || "Something went wrong"}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, useReducer } from "react";
 import axios from "axios";
-import { useUser } from "../context/UserContext";
+import { useSelector, useDispatch } from "react-redux";
+import { logoutUser } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { debounce } from "lodash";
@@ -13,7 +14,8 @@ const BASE_URL =
 
 
 const useJobs = () => {
-  const { user, isUserLoading, logoutUser } = useUser();
+  const dispatch = useDispatch();
+const { user, loading: isUserLoading } = useSelector((state) => state.user);
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,7 +75,7 @@ const useJobs = () => {
     } catch (error) {
       console.error("❌ Error fetching applied jobs:", error);
     }
-  }, [user?.id]);
+  }, [user?.id, currentPage, dispatch]);
   
   
   const fetchUserJobCounts = useCallback(async () => {

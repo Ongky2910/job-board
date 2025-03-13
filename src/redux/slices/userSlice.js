@@ -15,7 +15,9 @@ const refreshToken = async () => {
     const response = await api.get("/api/auth/refresh-token");
     if (response.data.token) {
       localStorage.setItem("accessToken", response.data.token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+      api.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${response.data.token}`;
       return response.data.token;
     }
   } catch (error) {
@@ -40,47 +42,58 @@ api.interceptors.response.use(
 );
 
 // Async thunk untuk login
-export const loginUser = createAsyncThunk("user/login", async ({ email, password }, { rejectWithValue }) => {
-  try {
-    const response = await api.post("/api/auth/login", { email, password });
-    console.log("🔥 API Login Response:", response.data);
-    
-    localStorage.setItem("accessToken", response.data.token);
-    api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
-    toast.success("Login successful!");
-    return response.data.user;
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Login failed");
-    return rejectWithValue(err.response?.data || "Login failed");
+export const loginUser = createAsyncThunk(
+  "user/login",
+  async ({ email, password }, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/api/auth/login", { email, password });
+      console.log("🔥 API Login Response:", response.data);
+
+      localStorage.setItem("accessToken", response.data.token);
+      api.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${response.data.token}`;
+      toast.success("Login successful!");
+      return response.data.user;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Login failed");
+      return rejectWithValue(err.response?.data || "Login failed");
+    }
   }
-});
+);
 
 // Async thunk untuk logout
-export const logoutUser = createAsyncThunk("user/logout", async (_, { rejectWithValue }) => {
-  try {
-    await api.post("/api/auth/logout");
-    localStorage.removeItem("accessToken");
-    delete api.defaults.headers.common["Authorization"];
-    toast.success("Logout successful! 👋");
-  } catch (err) {
-    toast.error("Logout failed");
-    return rejectWithValue(err.response?.data || "Logout failed");
+export const logoutUser = createAsyncThunk(
+  "user/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      await api.post("/api/auth/logout");
+      localStorage.removeItem("accessToken");
+      delete api.defaults.headers.common["Authorization"];
+      toast.success("Logout successful! 👋");
+    } catch (err) {
+      toast.error("Logout failed");
+      return rejectWithValue(err.response?.data || "Logout failed");
+    }
   }
-});
+);
 
 // Async thunk untuk update profil
-export const updateProfile = createAsyncThunk("user/updateProfile", async (formData, { rejectWithValue }) => {
-  try {
-    const res = await api.put("/api/auth/update-profile", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    toast.success("Profile updated successfully!");
-    return res.data;
-  } catch (err) {
-    toast.error("Failed to update profile");
-    return rejectWithValue(err.response?.data || "Failed to update profile");
+export const updateProfile = createAsyncThunk(
+  "user/updateProfile",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const res = await api.put("/api/auth/update-profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Profile updated successfully!");
+      return res.data;
+    } catch (err) {
+      toast.error("Failed to update profile");
+      return rejectWithValue(err.response?.data || "Failed to update profile");
+    }
   }
-});
+);
 
 const userSlice = createSlice({
   name: "user",
@@ -97,7 +110,10 @@ const userSlice = createSlice({
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        console.log("✅ Login successful, updating Redux state:", action.payload);
+        console.log(
+          "✅ Login successful, updating Redux state:",
+          action.payload
+        );
         state.loading = false;
         state.user = action.payload;
       })
@@ -107,6 +123,9 @@ const userSlice = createSlice({
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
+        state.loading = false;
+        state.error = null;
+        localStorage.removeItem("accessToken");
       })
       .addCase(updateProfile.pending, (state) => {
         state.loading = true;

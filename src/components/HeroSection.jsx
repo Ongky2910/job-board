@@ -1,33 +1,30 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useUser } from "../context/UserContext";  
+import { useSelector } from "react-redux";
 
 export default function HeroSection() {
-  const { user, isUserLoading } = useUser();  // Ambil data pengguna dari context
+  const { user, loading: isUserLoading } = useSelector((state) => state.user);
   const [displayName, setDisplayName] = useState("User");
 
-
   useEffect(() => {
-    console.log("User data:", user); // Cek data user
-    console.log("User name:", user?.name); // Cek apakah user.name ada
-  
-    if (user?.name) {
-      setDisplayName(user.name); // Jika ada nama, gunakan nama
-    } else if (user?.email) {
-      const nameFromEmail = user.email.split('@')[0];
-      console.log("Name from email:", nameFromEmail); // Debug nama dari email
-      setDisplayName(nameFromEmail); // Jika tidak ada nama, gunakan email
+    console.log("🔍 Checking user state in HeroSection:", user);
+
+    if (user && typeof user === "object") {
+      if (user.name) {
+        console.log("✅ User name detected:", user.name);
+        setDisplayName(user.name);
+      } else if (user.email) {
+        const nameFromEmail = user.email.split('@')[0];
+        console.log("📧 Extracted name from email:", nameFromEmail);
+        setDisplayName(nameFromEmail);
+      }
     }
   }, [user]);
-  
-  // 🔹 Tambahkan useEffect ini untuk memantau perubahan loading state & user
+
   useEffect(() => {
-    console.log("User loading state:", isUserLoading);
-    console.log("Current user data:", user);
-  }, [isUserLoading, user]);
-  
-  
-  
+    console.log("⏳ Loading state:", isUserLoading);
+  }, [isUserLoading]);
+
   if (isUserLoading) {
     return (
       <section className="h-screen flex flex-col items-center justify-center text-center bg-gradient-to-b from-blue-500 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white px-6">
@@ -43,10 +40,8 @@ export default function HeroSection() {
     );
   }
 
-  // Menampilkan Nama User di HeroSection
   return (
     <section className="h-screen flex flex-col items-center justify-center text-center bg-gradient-to-b from-blue-500 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white px-6">
-      {/* Animasi Fade-in */}
       <motion.h1
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -55,8 +50,6 @@ export default function HeroSection() {
       >
         Find Your Dream Job
       </motion.h1>
-
-      {/* Tampilkan Nama User jika ada */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -65,7 +58,6 @@ export default function HeroSection() {
       >
         Hi, {displayName}!
       </motion.div>
-
       <motion.p
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -74,7 +66,6 @@ export default function HeroSection() {
       >
         Browse thousands of job listings from top companies.
       </motion.p>
-
       <motion.a
         href="/jobs"
         whileHover={{ scale: 1.1, rotate: 5 }}

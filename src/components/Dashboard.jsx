@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useUser } from "../context/UserContext";
+import { useSelector } from "react-redux";
 import useJobs from "../hooks/useJobs";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,27 +7,20 @@ import { Trash2 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
-import JobDetail from "./JobDetail";
 
 axios.defaults.withCredentials = true;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const {
-    user,
-    refreshToken,
-    isLoading: isUserLoading,
-  } = useUser() ?? { user: null, isLoading: true };
+  const { user, isLoading: isUserLoading } = useSelector((state) => state.auth); // ✅ Ambil user dari Redux
   const { jobs = [], setJobs, handleUnapplyJob } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savedJobs, setSavedJobs] = useState([]);
   const [appliedJobs, setAppliedJobs] = useState([]);
-const [selectedJob, setSelectedJob] = useState(null);
+  const [selectedJob, setSelectedJob] = useState(null);
   const [error, setError] = useState(null);
-  const API_BASE_URL =
-    import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
-
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   const openJobDetail = (job) => {
     setSelectedJob(job);
@@ -44,13 +37,10 @@ const [selectedJob, setSelectedJob] = useState(null);
       setLoading(true);
       setError(null);
       try {
-        let accessToken = localStorage.getItem("accessToken");
+        const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) {
-          accessToken = await refreshToken();
-          if (!accessToken) {
-            navigate("/login");
-            return;
-          }
+          navigate("/login");
+          return;
         }
 
         const userRes = await axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
@@ -97,9 +87,7 @@ const [selectedJob, setSelectedJob] = useState(null);
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
-        <p className="mt-4 text-gray-600 dark:text-gray-400">
-          Loading dashboard...
-        </p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard...</p>
       </div>
     );
   }
@@ -111,23 +99,15 @@ const [selectedJob, setSelectedJob] = useState(null);
           Welcome, {userData?.name || "Guest"}! 🚀
         </h1>
         {error && (
-          <div className="bg-red-500 text-white p-4 mb-4 rounded-lg">
-            {error}
-          </div>
+          <div className="bg-red-500 text-white p-4 mb-4 rounded-lg">{error}</div>
         )}
 
         <div className="grid grid-cols-2 gap-6 mb-8">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="bg-blue-500 text-white rounded-lg p-6 shadow-lg"
-          >
+          <motion.div whileHover={{ scale: 1.05 }} className="bg-blue-500 text-white rounded-lg p-6 shadow-lg">
             <h3 className="text-lg font-semibold">Jobs Applied</h3>
             <p className="text-3xl font-bold">{appliedJobs.length}</p>
           </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="bg-green-500 text-white rounded-lg p-6 shadow-lg"
-          >
+          <motion.div whileHover={{ scale: 1.05 }} className="bg-green-500 text-white rounded-lg p-6 shadow-lg">
             <h3 className="text-lg font-semibold">Jobs Saved</h3>
             <p className="text-3xl font-bold">{savedJobs.length}</p>
           </motion.div>
@@ -137,16 +117,10 @@ const [selectedJob, setSelectedJob] = useState(null);
         {appliedJobs.length ? (
           <ul className="space-y-4">
             {appliedJobs.map((job) => (
-              <motion.li
-                whileHover={{ scale: 1.02 }}
-                key={job._id}
-                className="flex justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
-              >
+              <motion.li whileHover={{ scale: 1.02 }} key={job._id} className="flex justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div>
                   <h3 className="text-lg font-semibold">{job.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {job.company}
-                  </p>
+                  <p className="text-gray-600 dark:text-gray-400">{job.company}</p>
                 </div>
                 <button
                   onClick={() => handleUnapplyJob(job._id)}
@@ -165,16 +139,10 @@ const [selectedJob, setSelectedJob] = useState(null);
         {savedJobs.length ? (
           <ul className="space-y-4">
             {savedJobs.map((job) => (
-              <motion.li
-                whileHover={{ scale: 1.02 }}
-                key={job.id}
-                className="flex justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
-              >
+              <motion.li whileHover={{ scale: 1.02 }} key={job.id} className="flex justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div>
                   <h3 className="text-lg font-semibold">{job.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {job.company}
-                  </p>
+                  <p className="text-gray-600 dark:text-gray-400">{job.company}</p>
                 </div>
                 <button
                   onClick={() => removeSavedJob(job._id)}
@@ -187,19 +155,6 @@ const [selectedJob, setSelectedJob] = useState(null);
           </ul>
         ) : (
           <p className="text-gray-500">No saved jobs yet.</p>
-        )}
-     {selectedJob && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md">
-              <h2 className="text-xl font-bold">{selectedJob.title}</h2>
-              <p className="text-gray-700 dark:text-gray-300">{selectedJob.company}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedJob.postDate}</p>
-              <p className="mt-2">{selectedJob.description}</p>
-              <p className="mt-2"><strong>Salary:</strong> {selectedJob.salaryRange}</p>
-              <p className="mt-2"><strong>Job Type:</strong> {selectedJob.jobType}</p>
-              <button className="mt-4 bg-red-500 text-white px-4 py-2 rounded" onClick={() => setSelectedJob(null)}>Close</button>
-            </div>
-          </div>
         )}
       </div>
     </div>

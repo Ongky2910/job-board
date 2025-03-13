@@ -11,7 +11,6 @@ import { ClipLoader } from "react-spinners";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UserProvider, useUser } from "./context/UserContext";
 import useJobs from "./hooks/useJobs";
 import PrivateRoute from "./components/PrivateRoute";
 import axios from "axios";
@@ -99,7 +98,6 @@ const AppContent = () => {
             <Route path="/register" element={<Register />} />
             <Route path="/logout" element={<Logout />} />
 
-          
             {/* ✅ PrivateRoute untuk halaman yang butuh login */}
             <Route path="/" element={<PrivateRoute />}>
               <Route
@@ -132,17 +130,15 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider>
-      <UserProvider>
-        <Suspense
-          fallback={
-            <div className="flex justify-center items-center h-screen bg-white dark:bg-gray-900">
-              <ClipLoader color="blue" size={50} />
-            </div>
-          }
-        >
-          <AppContent />
-        </Suspense>
-      </UserProvider>
+      <Suspense
+        fallback={
+          <div className="flex justify-center items-center h-screen bg-white dark:bg-gray-900">
+            <ClipLoader color="blue" size={50} />
+          </div>
+        }
+      >
+        <AppContent />
+      </Suspense>
     </ThemeProvider>
   );
 };
