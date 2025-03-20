@@ -1,22 +1,26 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
-
+import { useEffect, useState } from "react";
+import Cookies from "js-cookie";
 
 const PrivateRoute = () => {
   const { user, loading } = useSelector((state) => state.user);
-  const token = localStorage.getItem("accessToken");
+  const [isChecking, setIsChecking] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem("accessToken") || Cookies.get("accessToken"));
 
-  console.log("🔍 [PrivateRoute] user:", user);
-  console.log("🔍 [PrivateRoute] token:", token);
+  useEffect(() => {
+    console.log("🔍 [PrivateRoute] Token di localStorage:", token);
+    console.log("🔍 [PrivateRoute] User dari Redux:", user);
+    setTimeout(() => setIsChecking(false), 500); // Delay kecil untuk menunggu Redux
+  }, [user, token]);
 
-
-  if (loading) {
+  if (loading || isChecking) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  return user || token ? (
+  return user && token ? (
     <>
-      {console.log("✅ User Terautentikasi, masuk ke halaman private")}
+      {console.log("✅ User dan token valid, masuk ke halaman private")}
       <Outlet />
     </>
   ) : (
@@ -25,9 +29,6 @@ const PrivateRoute = () => {
       <Navigate to="/login" replace />
     </>
   );
-  
 };
-
-
 
 export default PrivateRoute;

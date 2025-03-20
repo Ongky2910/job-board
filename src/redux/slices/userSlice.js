@@ -126,21 +126,31 @@ export const loginUser = createAsyncThunk(
       const response = await api.post("/api/auth/login", { email, password });
       const { user, token } = response.data;
 
-      Cookies.set("accessToken", token, { expires: 7 });
+      if (!token) {
+        throw new Error("Token tidak ditemukan!");
+      }
+
+      // ✅ Simpan token di Cookie & localStorage
+      Cookies.set("accessToken", token, { expires: 7, secure: true, sameSite: "Strict" });
       localStorage.setItem("accessToken", token);
       localStorage.setItem("user", JSON.stringify(user));
 
+      // ✅ Set Header Authorization untuk request berikutnya
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
       dispatch(setUser(user));
-      toast.success("Login successful!");
-      return user;
+      toast.success("✅ Login berhasil!");
+
+      return { user, token }; // ✅ Return user & token agar Redux bisa menyimpan keduanya
     } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed");
-      return rejectWithValue(err.response?.data || "Login failed");
+      const errorMessage = err.response?.data?.message || err.message || "Login gagal";
+
+      toast.error(`❌ ${errorMessage}`);
+      return rejectWithValue(errorMessage);
     }
   }
 );
+
 
 export const logoutUser = createAsyncThunk(
   "user/logout",
