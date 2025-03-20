@@ -94,14 +94,14 @@ export default function Login() {
           <div className="flex justify-between items-center">
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 flex justify-center items-center"
               disabled={loading}
             >
              {loading ? (
-                <>
-                  <Loader className="animate-spin mr-2" size={20} />
-                  Logging In...
-                </>
+                <div className="flex items-center space-x-2">
+                <Loader className="animate-spin" size={20} />
+                <span>Logging In...</span>
+              </div>
               ) : (
                 "Login"
               )}

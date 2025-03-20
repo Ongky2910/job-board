@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import { persistor, store } from "../store";
+import Swal from "sweetalert2";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
@@ -143,7 +144,7 @@ export const loginUser = createAsyncThunk(
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
       dispatch(setUser(user));
-      toast.success("✅ Login berhasil!");
+      toast.success("✅ Login successfull!");
 
       return { user, token };
     } catch (err) {
@@ -158,7 +159,20 @@ export const loginUser = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk(
   "user/logout",
-  async (_, { dispatch, rejectWithValue }) => {
+    async (_, { dispatch, rejectWithValue }) => {
+      const confirmLogout = await Swal.fire({
+        title: "Are you sure?",
+        text: "You will be logged out!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, logout!",
+      });
+  
+      if (!confirmLogout.isConfirmed) return rejectWithValue("Logout cancelled");
+  
+
     try {
       await api.post("/api/auth/logout");
 
