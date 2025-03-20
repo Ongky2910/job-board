@@ -1,15 +1,43 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setUser } from "../redux/slices/userSlice"; 
+import Cookies from "js-cookie";
 
 export default function HeroSection() {
+  const dispatch = useDispatch();
   const { user, loading: isUserLoading } = useSelector((state) => state.user);
   const [displayName, setDisplayName] = useState("User");
 
+  // Pertama, cek apakah user ada di localStorage atau Cookies
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user") || Cookies.get("user");
+  
+    if (storedUser) {
+      try {
+        // Check if it's a valid string that can be parsed into JSON
+        const parsedUser = typeof storedUser === "string" ? JSON.parse(storedUser) : storedUser;
+        console.log("🔍 User found:", parsedUser);
+        dispatch(setUser(parsedUser));
+        setDisplayName(parsedUser.name || parsedUser.email.split('@')[0]);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        // Handle the error gracefully, maybe clear invalid data or notify the user
+        localStorage.removeItem("user");
+        Cookies.remove("user");
+      }
+    } else {
+      console.log("🔍 No user data found.");
+    }
+  }, [dispatch]);
+  
+  
+
+  // Jika user state berubah, set displayName berdasarkan nama pengguna
   useEffect(() => {
     console.log("🔍 Checking user state in HeroSection:", user);
 
-    if (user && typeof user === "object") {
+    if (user && typeof user === "object" && (user.name || user.email)) {
       if (user.name) {
         console.log("✅ User name detected:", user.name);
         setDisplayName(user.name);

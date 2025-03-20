@@ -12,7 +12,7 @@ axios.defaults.withCredentials = true;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, isLoading: isUserLoading } = useSelector((state) => state.auth); // ✅ Ambil user dari Redux
+  const { user, loading: isUserLoading } = useSelector((state) => state.user); 
   const { jobs = [], setJobs, handleUnapplyJob } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);

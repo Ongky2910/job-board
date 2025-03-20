@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import { registerUser } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -11,12 +12,12 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
-  const [user, setUser] = useState(null); 
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { loading, error } = useSelector((state) => state.user);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -24,61 +25,32 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(""); 
 
     if (!formData.displayName || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError("Please fill in all fields");
-      setLoading(false);
+      toast.error("Please fill in all fields");
       return;
     }
 
-     // Validasi jika password dan confirm password cocok
-     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
       return;
     }
 
-    // Validasi format email
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(formData.email)) {
-      setError("Please enter a valid email address");
-      setLoading(false);
+      toast.error("Please enter a valid email address");
       return;
     }
 
-    try {
-      const { displayName, email, password } = formData;
-      const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
-      const { data } = await axios.post(
-        `${apiUrl}/api/auth/register`,
-        { displayName, email, password }
-      );
-
-      if (data.user) {
-        console.log("✅ Registration successful!", data.user);
-        setUser(data.user); // Simpan user yang baru terdaftar
-        toast.success("Registration successful! Redirecting...", {
-          autoClose: 2000,
-          theme: "colored",
-        });
-        setTimeout(() => navigate("/login"), 2500); // Redirect ke halaman login setelah 2 detik
-      } else {
-        setError("Unexpected server response");
-        toast.error("Unexpected server response. Please try again.");
-      }
-    } catch (error) {
-      if (error.response?.data?.message === "User already exists") {
-        setError("Email is already registered. Please use a different email.");
-        toast.error("Email is already registered.");
-      } else {
-        setError("Registration failed. Please try again.");
-        toast.error("Registration failed! Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
+    dispatch(registerUser(formData))
+      .unwrap()
+      .then(() => {
+        toast.success("Registration successful! Redirecting...");
+        setTimeout(() => navigate("/login"), 2000);
+      })
+      .catch(() => {
+        toast.error("Registration failed!");
+      });
   };
 
   return (
@@ -123,7 +95,7 @@ export default function Register() {
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
-<div className="relative">
+          <div className="relative">
             <input
               type={showConfirmPassword ? "text" : "password"}
               name="confirmPassword"

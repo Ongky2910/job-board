@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 export default function Navbar() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.user.user); // User dari Redux
+  const user = useSelector((state) => state.user.user);
   const [isOpen, setIsOpen] = useState(false);
   const { isDarkMode, toggleDarkMode } = useTheme();
 
@@ -28,13 +28,12 @@ export default function Navbar() {
           <span>Job Board</span>
         </Link>
 
-        {/* Menu untuk device besar */}
+        {/* Menu untuk Desktop */}
         <div className="hidden md:flex space-x-8 items-center">
           <Link to="/" className="hover:text-blue-300 font-bold">Home</Link>
           <Link to="/jobs" className="hover:text-blue-300 font-bold">Jobs</Link>
           <Link to="/contact" className="hover:text-blue-300 font-bold">Contact</Link>
 
-          {/* Jika user login, tampilkan menu tambahan */}
           {user && (
             <>
               <Link to="/dashboard" className="hover:text-blue-300 font-bold">Dashboard</Link>
@@ -43,14 +42,25 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Logout & Dark Mode di Desktop */}
+        {/* Dark Mode & Logout (Desktop) */}
         <div className="hidden md:flex items-center space-x-4">
-          <button onClick={toggleDarkMode} className="bg-transparent hover:scale-110 transition">
-            {isDarkMode ? <FiMoon size={24} className="text-gray-400" /> : <FiSun size={24} className="text-yellow-300" />}
+          <button 
+            onClick={toggleDarkMode} 
+            className="hover:scale-110 transition duration-300 ease-in-out"
+          >
+            {isDarkMode ? (
+              <FiMoon size={24} className="text-gray-400 hover:text-gray-300" />
+            ) : (
+              <FiSun size={24} className="text-yellow-300 hover:text-yellow-400" />
+            )}
           </button>
 
           {user && (
-            <button onClick={handleLogout} className="hover:scale-110 transition" title="Logout">
+            <button 
+              onClick={handleLogout} 
+              className="hover:scale-110 transition duration-300 ease-in-out"
+              title="Logout"
+            >
               <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
             </button>
           )}
@@ -58,12 +68,23 @@ export default function Navbar() {
 
         {/* Menu Mobile */}
         <div className="flex md:hidden items-center space-x-3">
-          <button onClick={toggleDarkMode} className="hover:scale-110 transition">
-            {isDarkMode ? <FiMoon size={24} className="text-gray-400" /> : <FiSun size={24} className="text-yellow-300" />}
+          <button 
+            onClick={toggleDarkMode} 
+            className="hover:scale-110 transition duration-300 ease-in-out"
+          >
+            {isDarkMode ? (
+              <FiMoon size={24} className="text-gray-400 hover:text-gray-300" />
+            ) : (
+              <FiSun size={24} className="text-yellow-300 hover:text-yellow-400" />
+            )}
           </button>
 
           {user && (
-            <button onClick={handleLogout} className="hover:scale-110 transition" title="Logout">
+            <button 
+              onClick={handleLogout} 
+              className="hover:scale-110 transition duration-300 ease-in-out"
+              title="Logout"
+            >
               <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
             </button>
           )}

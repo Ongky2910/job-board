@@ -14,6 +14,10 @@ import "react-toastify/dist/ReactToastify.css";
 import useJobs from "./hooks/useJobs";
 import PrivateRoute from "./components/PrivateRoute";
 import axios from "axios";
+import { useDispatch } from "react-redux";
+import { setUser, logoutUser } from "./redux/slices/userSlice";
+import Cookies from "js-cookie";
+import { useNavigate } from "react-router-dom";
 
 // Lazy-loaded components
 import Navbar from "./components/Navbar";
@@ -61,17 +65,111 @@ export const ThemeProvider = ({ children }) => {
 
 // ✅ AppContent yang menggunakan useJobs()
 const AppContent = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { jobs, isLoading } = useJobs();
   const location = useLocation();
   const hiddenNavRoutes = ["/login", "/register"];
   const isNavHidden = hiddenNavRoutes.includes(location.pathname);
 
+  const [isTokenVerified, setIsTokenVerified] = useState(false);
+  const [isPersisted, setIsPersisted] = useState(false);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // ✅ Tambahkan ini
+
+  // ✅ Tunggu Redux Persist selesai sebelum mulai verifikasi user
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
+    const timeout = setTimeout(() => {
+      setIsPersisted(true);
+    }, 1000);
+
+    return () => clearTimeout(timeout);
   }, []);
+
+  // ✅ Verifikasi Token Jika Ada
+  useEffect(() => {
+    if (!isPersisted) return; // Pastikan Redux Persist selesai dulu
+
+    const token = localStorage.getItem("accessToken") || Cookies.get("accessToken");
+
+    if (!token) {
+      console.log("❌ Tidak ada token, mengarahkan ke login...");
+      setIsTokenVerified(true);
+      navigate("/login");
+      return;
+    }
+
+    // Jika ada token, lakukan verifikasi
+    axios
+      .get("/api/auth/verify-token")
+      .then((response) => {
+        if (response.data.user) {
+          dispatch(setUser(response.data.user));
+          setIsUserLoggedIn(true); // ✅ Tandai bahwa user benar-benar login
+          setIsTokenVerified(true);
+        } else {
+          console.log("❌ Token tidak valid, logout...");
+          dispatch(logoutUser());
+          localStorage.removeItem("accessToken");
+          Cookies.remove("accessToken");
+          navigate("/login");
+        }
+      })
+      .catch((error) => {
+        console.error("Token verification failed:", error);
+        dispatch(logoutUser());
+        localStorage.removeItem("accessToken");
+        Cookies.remove("accessToken");
+        navigate("/login");
+      });
+  }, [isPersisted, dispatch, navigate]);
+
+  // ✅ Cek User dari localStorage dengan aman
+  useEffect(() => {
+    if (!isPersisted) return; // Pastikan Redux Persist selesai dulu
+  
+    const token = localStorage.getItem("accessToken") || Cookies.get("accessToken");
+  
+    if (!token) {
+      console.log("❌ Tidak ada token, mengarahkan ke login...");
+      setIsTokenVerified(true);
+      navigate("/login");
+      return;
+    }
+  
+    // Jika ada token, lakukan verifikasi
+    axios
+      .get("/api/auth/verify-token")
+      .then((response) => {
+        if (response.data.user) {
+          dispatch(setUser(response.data.user));
+          setIsUserLoggedIn(true); // ✅ Tandai bahwa user benar-benar login
+          setIsTokenVerified(true);
+        } else {
+          console.log("❌ Token tidak valid, logout...");
+          dispatch(logoutUser());
+          localStorage.removeItem("accessToken");
+          Cookies.remove("accessToken");
+          navigate("/login");
+        }
+      })
+      .catch((error) => {
+        console.error("Token verification failed:", error);
+        dispatch(logoutUser());
+        localStorage.removeItem("accessToken");
+        Cookies.remove("accessToken");
+        navigate("/login");
+      });
+  }, [isPersisted, dispatch, navigate]);
+  
+
+  // ✅ Jangan tampilkan halaman jika persist atau token belum selesai
+  if (!isPersisted || !isTokenVerified) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-white dark:bg-gray-900">
+        <ClipLoader color="blue" size={50} />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-900 text-black dark:text-white transition-all duration-300">
@@ -99,23 +197,25 @@ const AppContent = () => {
             <Route path="/logout" element={<Logout />} />
 
             {/* ✅ PrivateRoute untuk halaman yang butuh login */}
-            <Route path="/" element={<PrivateRoute />}>
-              <Route
-                path="dashboard"
-                element={
-                  <ErrorBoundary>
-                    <Suspense
-                      fallback={
-                        <h1 style={{ color: "red" }}>Loading Dashboard...</h1>
-                      }
-                    >
-                      <Dashboard />
-                    </Suspense>
-                  </ErrorBoundary>
-                }
-              />
-              <Route path="saved-jobs" element={<SavedJobs />} />
-            </Route>
+            {isUserLoggedIn && (
+              <Route path="/" element={<PrivateRoute />}>
+                <Route
+                  path="dashboard"
+                  element={
+                    <ErrorBoundary>
+                      <Suspense
+                        fallback={
+                          <h1 style={{ color: "red" }}>Loading Dashboard...</h1>
+                        }
+                      >
+                        <Dashboard />
+                      </Suspense>
+                    </ErrorBoundary>
+                  }
+                />
+                <Route path="saved-jobs" element={<SavedJobs />} />
+              </Route>
+            )}
             <Route path="edit-profile" element={<EditProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -125,6 +225,7 @@ const AppContent = () => {
     </div>
   );
 };
+
 
 // ✅ UserProvider dipanggil di sini agar `useJobs()` bisa mendapatkan user
 const App = () => {

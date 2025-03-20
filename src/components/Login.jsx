@@ -1,31 +1,35 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../redux/slices/userSlice"; 
+import { loginUser } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
 import { Eye, EyeOff, Briefcase } from "lucide-react";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [isRedirected, setIsRedirected] = useState(false); 
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   // Ambil state dari Redux
   const { user, loading, error } = useSelector((state) => state.user);
 
+  // Handle Login Success
   useEffect(() => {
-    console.log("🔍 Checking user state:", user); 
-    if (user) {
-      toast.success("Login successful!", { autoClose: 1500 });
-      setTimeout(() => {
-        console.log("✅ Navigating to home..."); 
-        navigate("/");
-      }, 1500);
+    if (user && !isRedirected && location.pathname === "/login") {
+      setIsRedirected(true); // ✅ Pastikan redirect hanya terjadi sekali
+      navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, isRedirected, navigate, location.pathname]);
   
-  
+
+  // Handle Error
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message || "Something went wrong");
+    }
+  }, [error]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
