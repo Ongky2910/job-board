@@ -19,7 +19,7 @@ export default function Login() {
   useEffect(() => {
     const token = Cookies.get("accessToken") || localStorage.getItem("accessToken");
   
-    if (user && !isRedirected && location.pathname === "/login") {
+    if (user && token && !isRedirected && location.pathname === "/login") {
       setIsRedirected(true);
       navigate("/");
     }

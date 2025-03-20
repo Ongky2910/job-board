@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, shallowEqual } from "react-redux";
 import useJobs from "../hooks/useJobs";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -10,19 +10,13 @@ import { motion } from "framer-motion";
 
 axios.defaults.withCredentials = true;
 
-export default function Dashboard() {
+export default function Dashboard({ user: memoizedUser }) {
   const navigate = useNavigate();
-  const {
-    user,
-    loading: isUserLoading,
-    _persist,
-  } = useSelector((state) => ({
-    user: state.user,
-    loading: state.user.loading,
-    _persist: state.user._persist,
-  }));
-
-  const isPersisted = _persist?.rehydrated ?? false;
+  const user = useSelector((state) => state.user.user, shallowEqual);
+  const isUserLoading = useSelector((state) => state.user.loading);
+  const isPersisted = useSelector(
+    (state) => state._persist?.rehydrated ?? false
+  );
 
   const { jobs = [], setJobs, handleUnapplyJob } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
@@ -34,6 +28,8 @@ export default function Dashboard() {
   const API_BASE_URL =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
+    console.log("Redux state user (dari useSelector):", user);
+
   const openJobDetail = (job) => {
     setSelectedJob(job);
   };
@@ -43,27 +39,28 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (!isPersisted || isUserLoading) return;
-
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken || !user?.id) {
-      console.log(
-        "🚀 Token tidak valid atau user belum terautentikasi, redirect ke login..."
-      );
+    console.log("🔥 useEffect terpanggil!");
+    console.log("isUserLoading:", isUserLoading);
+    console.log("Redux state user:", user);
+    console.log("user?.id:", user?.id);
+    console.log("isPersisted:", isPersisted);
+  
+    if (isUserLoading) return;
+  
+    if (!user?.id) {
+      console.log("🔄 User belum login, navigasi ke login...");
       navigate("/login");
       return;
     }
-
+  
     const fetchData = async () => {
       setLoading(true);
-      setError(null);
+      console.log("✅ Fetching dashboard data...");
       try {
         const userRes = await axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
           withCredentials: true,
         });
-
-        console.log("Fetched user data:", userRes.data.user);
+  
         if (userRes?.data?.user) {
           setUserData(userRes.data.user);
           setSavedJobs(userRes.data.user.savedJobs ?? []);
@@ -75,9 +72,9 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-
+  
     fetchData();
-  }, [isPersisted, isUserLoading, user?.id, navigate]);
+  }, [user?.id, isUserLoading, isPersisted, navigate]); 
 
   const removeSavedJob = async (id) => {
     console.log("Job ID:", id);
@@ -100,7 +97,6 @@ export default function Dashboard() {
 
   console.log("Redux User State:", user);
   console.log("Redux Persist State:", isPersisted);
-  
 
   if (loading) {
     return (

@@ -2,12 +2,10 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
-import { persistor } from "../store";
+import { persistor, store } from "../store";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
-const storedUser = localStorage.getItem("user");
-const token = Cookies.get("accessToken") || localStorage.getItem("accessToken");
 const logoutEvent = new Event("logout");
 
 const api = axios.create({
@@ -15,8 +13,10 @@ const api = axios.create({
   withCredentials: true,
 });
 
-if (token) {
-  api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+const getToken = () => Cookies.get("accessToken") || localStorage.getItem("accessToken");
+
+if (getToken()) {
+  api.defaults.headers.common["Authorization"] = `Bearer ${getToken()}`;
 }
 
 let isRefreshing = false;
@@ -29,6 +29,24 @@ const subscribeTokenRefresh = (cb) => {
 const onTokenRefreshed = (newToken) => {
   refreshSubscribers.forEach((cb) => cb(newToken));
   refreshSubscribers = [];
+};
+
+const refreshToken = async () => {
+  try {
+    const response = await api.get("/api/auth/refresh-token");
+    if (response.status !== 200) throw new Error("Invalid refresh token");
+
+    const newToken = response.data.token;
+    Cookies.set("accessToken", newToken, { expires: 7 });
+    localStorage.setItem("accessToken", newToken);
+    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+
+    return newToken;
+  } catch (error) {
+    console.error("❌ Refresh token gagal, logout...");
+    window.dispatchEvent(logoutEvent);
+    return null;
+  }
 };
 
 api.interceptors.response.use(
@@ -68,24 +86,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-const refreshToken = async () => {
-  try {
-    const response = await api.get("/api/auth/refresh-token");
-    if (response.status !== 200) throw new Error("Invalid refresh token");
-
-    const newToken = response.data.token;
-    Cookies.set("accessToken", newToken, { expires: 7 });
-    localStorage.setItem("accessToken", newToken);
-    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
-
-    return newToken;
-  } catch (error) {
-    console.error("❌ Refresh token gagal, logout...");
-    window.dispatchEvent(logoutEvent);
-    return null;
-  }
-};
 
 export const verifyToken = createAsyncThunk(
   "user/verifyToken",
@@ -131,7 +131,11 @@ export const loginUser = createAsyncThunk(
       }
 
       // ✅ Simpan token di Cookie & localStorage
-      Cookies.set("accessToken", token, { expires: 7, secure: true, sameSite: "Strict" });
+      Cookies.set("accessToken", token, {
+        expires: 7,
+        secure: true,
+        sameSite: "Strict",
+      });
       localStorage.setItem("accessToken", token);
       localStorage.setItem("user", JSON.stringify(user));
 
@@ -141,16 +145,16 @@ export const loginUser = createAsyncThunk(
       dispatch(setUser(user));
       toast.success("✅ Login berhasil!");
 
-      return { user, token }; // ✅ Return user & token agar Redux bisa menyimpan keduanya
+      return { user, token };
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || "Login gagal";
+      const errorMessage =
+        err.response?.data?.message || err.message || "Login gagal";
 
       toast.error(`❌ ${errorMessage}`);
       return rejectWithValue(errorMessage);
     }
   }
 );
-
 
 export const logoutUser = createAsyncThunk(
   "user/logout",
@@ -162,13 +166,16 @@ export const logoutUser = createAsyncThunk(
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
       Cookies.remove("accessToken");
+      Cookies.remove("refreshToken");
+
 
       // Hapus token di axios default headers
       delete api.defaults.headers.common["Authorization"];
 
-      await persistor.purge(); 
+      await persistor.purge();
 
       toast.success("Logout successful!");
+      return null;
     } catch (err) {
       toast.error("Logout failed");
       return rejectWithValue(err.response?.data || "Logout failed");
@@ -195,7 +202,7 @@ export const updateProfile = createAsyncThunk(
 const userSlice = createSlice({
   name: "user",
   initialState: {
-    user: null,
+    user: JSON.parse(localStorage.getItem("user")) || null,
     loading: false,
     error: null,
   },
@@ -204,6 +211,11 @@ const userSlice = createSlice({
       state.user = action.payload;
     },
     clearError: (state) => {
+      state.error = null;
+    },
+    resetUser: (state) => {
+      state.user = null;
+      state.loading = false;
       state.error = null;
     },
   },
@@ -222,11 +234,16 @@ const userSlice = createSlice({
         state.user = action.payload;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        state.user = action.payload;
+        state.loading = false;
+        state.user = action.payload.user;
+        state.error = null;
       })
+      
       .addCase(logoutUser.fulfilled, (state) => {
         console.log("✅ Logout sukses, reset user Redux");
         state.user = null;
+        state.loading = false;
+        state.error = null;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload;

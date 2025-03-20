@@ -6,6 +6,7 @@ import {
   useState,
   useContext,
   useEffect,
+  useMemo,
 } from "react";
 import { ClipLoader } from "react-spinners";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -77,46 +78,59 @@ const AppContent = () => {
 
   const [isTokenVerified, setIsTokenVerified] = useState(false);
   const [isPersisted, setIsPersisted] = useState(false);
-  
+
   // ✅ Ambil user dari Redux agar tetap login setelah refresh
   const user = useSelector((state) => state.user.user);
-  const isUserLoggedIn = !!user; 
+  const memoizedUser = useMemo(() => user, [user]);
+  const isUserLoggedIn = useMemo(() => !!user, [user]);
 
-    // ✅ Tunggu Redux Persist selesai sebelum mulai verifikasi user
- // ✅ Pastikan Redux Persist selesai dulu
-useEffect(() => {
-  const timeout = setTimeout(() => {
-    setIsPersisted(true);
-  }, 1000);
-  return () => clearTimeout(timeout);
-}, []);
 
-// ✅ Gunakan Redux Thunk verifyToken untuk verifikasi token
-useEffect(() => {
-  if (!isPersisted) return; // Tunggu Redux Persist selesai dulu
+  console.log("🟢 User dari Redux:", user);
+  console.log("🔍 isUserLoggedIn:", isUserLoggedIn);
 
-  dispatch(verifyToken())
-    .unwrap()
-    .then((user) => {
-      console.log("✅ Token valid, user ditemukan:", user);
-    })
-    .catch((error) => {
-      console.error("❌ Token tidak valid, harus logout:", error);
-    })
-    .finally(() => {
-      console.log("🔄 Verifikasi token selesai.");
+  // ✅ Pastikan Redux Persist selesai dulu
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsPersisted(true);
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // ✅ Gunakan Redux Thunk verifyToken untuk verifikasi token
+  useEffect(() => {
+    if (!isPersisted) return; // Tunggu Redux Persist selesai dulu
+
+    const token =
+      Cookies.get("accessToken") || localStorage.getItem("accessToken");
+    if (!token) {
+      console.log("🚫 Tidak ada token, tidak perlu verifikasi");
       setIsTokenVerified(true);
-    });
-}, [isPersisted, dispatch]);
+      return;
+    }
 
-useEffect(() => {
-  if (!isPersisted || !isTokenVerified) return; 
-  
-  if (!isUserLoggedIn) {
-    console.log("🚀 Token tidak valid, redirect ke login...");
-    navigate("/login");
-  }
-}, [isPersisted, isTokenVerified, isUserLoggedIn, navigate]);
+    dispatch(verifyToken())
+      .unwrap()
+      .then((user) => {
+        console.log("✅ Token valid, user ditemukan:", user);
+      })
+      .catch((error) => {
+        console.error("❌ Token tidak valid, harus logout:", error);
+        dispatch(logoutUser());
+        navigate("/login");
+      })
+      .finally(() => {
+        console.log("🔄 Verifikasi token selesai.");
+        setIsTokenVerified(true);
+      });
+  }, [isPersisted, dispatch, navigate]);
+
+  useEffect(() => {
+    if (!isPersisted || !isTokenVerified) return;
+    if (!isUserLoggedIn) {
+      console.log("🚀 Token tidak valid, redirect ke login...");
+      navigate("/login");
+    }
+  }, [isPersisted, isTokenVerified, isUserLoggedIn, navigate]);
 
   // ✅ Jangan tampilkan halaman jika persist atau token belum selesai
   if (!isPersisted || !isTokenVerified) {
@@ -164,7 +178,7 @@ useEffect(() => {
                           <h1 style={{ color: "red" }}>Loading Dashboard...</h1>
                         }
                       >
-                        <Dashboard />
+                        <Dashboard user={memoizedUser} />
                       </Suspense>
                     </ErrorBoundary>
                   }
@@ -182,21 +196,20 @@ useEffect(() => {
   );
 };
 
-
 // ✅ UserProvider dipanggil di sini agar `useJobs()` bisa mendapatkan user
 const App = () => {
   return (
     <ThemeProvider>
-    <PersistGate loading={null} persistor={persistor}>
-      <Suspense
-        fallback={
-          <div className="flex justify-center items-center h-screen bg-white dark:bg-gray-900">
-            <ClipLoader color="blue" size={50} />
-          </div>
-        }
-      >
-        <AppContent />
-      </Suspense>
+      <PersistGate loading={null} persistor={persistor}>
+        <Suspense
+          fallback={
+            <div className="flex justify-center items-center h-screen bg-white dark:bg-gray-900">
+              <ClipLoader color="blue" size={50} />
+            </div>
+          }
+        >
+          <AppContent />
+        </Suspense>
       </PersistGate>
     </ThemeProvider>
   );

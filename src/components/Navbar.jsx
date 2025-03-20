@@ -46,7 +46,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center space-x-4">
           <button 
             onClick={toggleDarkMode} 
-            className="hover:scale-110 transition duration-300 ease-in-out"
+            className="hover:scale-110 transition duration-300 ease-in-out bg-transparent dark:bg-transparent"
           >
             {isDarkMode ? (
               <FiMoon size={24} className="text-gray-400 hover:text-gray-300" />
@@ -58,7 +58,7 @@ export default function Navbar() {
           {user && (
             <button 
               onClick={handleLogout} 
-              className="hover:scale-110 transition duration-300 ease-in-out"
+              className="hover:scale-110 transition duration-300 ease-in-out bg-transparent dark:bg-transparent"
               title="Logout"
             >
               <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
