@@ -24,3 +24,7 @@ const store = configureStore({
 export const persistor = persistStore(store);
 export { store };
 
+// 🔍 Debugging Redux State di Console
+store.subscribe(() => {
+  console.log("Updated Redux State:", store.getState());
+});

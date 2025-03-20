@@ -101,7 +101,6 @@ const JobList = () => {
                
                 {/* 🔹 Apply & Save Buttons */}
                 <div className="flex gap-2 mt-4">
-                {console.log("Job data: ", job)} 
                   <button
                     onClick={() => {
                       console.log("Applying for job:", job._id || job.id);

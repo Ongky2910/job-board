@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
 import { Eye, EyeOff, Briefcase } from "lucide-react";
+import Cookies from "js-cookie";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -15,13 +16,14 @@ export default function Login() {
   // Ambil state dari Redux
   const { user, loading, error } = useSelector((state) => state.user);
 
-  // Handle Login Success
   useEffect(() => {
+    const token = Cookies.get("accessToken") || localStorage.getItem("accessToken");
+  
     if (user && !isRedirected && location.pathname === "/login") {
-      setIsRedirected(true); // ✅ Pastikan redirect hanya terjadi sekali
+      setIsRedirected(true);
       navigate("/");
     }
-  }, [user, isRedirected, navigate, location.pathname]);
+  }, [user, isRedirected, navigate, location.pathname]);  
   
 
   // Handle Error

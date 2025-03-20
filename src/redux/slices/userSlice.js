@@ -2,11 +2,13 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
+import { persistor } from "../store";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
 const storedUser = localStorage.getItem("user");
 const token = Cookies.get("accessToken") || localStorage.getItem("accessToken");
+const logoutEvent = new Event("logout");
 
 const api = axios.create({
   baseURL: API_URL,
@@ -18,102 +20,167 @@ if (token) {
 }
 
 let isRefreshing = false;
+let refreshSubscribers = [];
 
-const refreshToken = async () => {
-  if (isRefreshing) return null;
-  isRefreshing = true;
-  try {
-    const response = await api.get("/api/auth/refresh-token");
-    if (response.data.token) {
-      Cookies.set("accessToken", response.data.token, { expires: 7 });
-      localStorage.setItem("accessToken", response.data.token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
-      if (response.data.refreshToken) {
-        Cookies.set("refreshToken", response.data.refreshToken, { expires: 7 });
-      }
-      return response.data.token;
-    }
-  } catch (error) {
-    console.error("Failed to refresh token, logging out...");
-    await logoutUser();
-    window.location.href = "/login";
-  } finally {
-    isRefreshing = false;
-  }
-  return null;
+const subscribeTokenRefresh = (cb) => {
+  refreshSubscribers.push(cb);
 };
 
-export const verifyToken = createAsyncThunk("user/verifyToken", async (_, { dispatch, rejectWithValue }) => {
+const onTokenRefreshed = (newToken) => {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((newToken) => {
+            originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const newToken = await refreshToken();
+        if (!newToken) throw new Error("Failed to refresh token");
+
+        isRefreshing = false;
+        onTokenRefreshed(newToken);
+        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+        return api(originalRequest);
+      } catch (err) {
+        isRefreshing = false;
+        console.error("❌ Refresh token failed, logging out...");
+        window.dispatchEvent(logoutEvent);
+        return Promise.reject(err);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+const refreshToken = async () => {
   try {
-    const res = await api.get("/api/auth/verify-token");
-    return res.data.user;
+    const response = await api.get("/api/auth/refresh-token");
+    if (response.status !== 200) throw new Error("Invalid refresh token");
+
+    const newToken = response.data.token;
+    Cookies.set("accessToken", newToken, { expires: 7 });
+    localStorage.setItem("accessToken", newToken);
+    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+
+    return newToken;
   } catch (error) {
-    console.log("❌ Token invalid, logging out...");
-    dispatch(logoutUser());
-    return rejectWithValue("Invalid token");
+    console.error("❌ Refresh token gagal, logout...");
+    window.dispatchEvent(logoutEvent);
+    return null;
   }
-});
+};
 
-export const registerUser = createAsyncThunk("user/register", async ({ displayName, email, password }, { rejectWithValue }) => {
-  try {
-    const response = await api.post("/api/auth/register", { displayName, email, password });
-    toast.success("Registration successful! 🎉");
-    return response.data.user;
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Registration failed");
-    return rejectWithValue(err.response?.data || "Registration failed");
+export const verifyToken = createAsyncThunk(
+  "user/verifyToken",
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      const res = await api.get("/api/auth/verify-token");
+      return res.data.user;
+    } catch (error) {
+      console.log("❌ Token invalid, logging out...");
+      dispatch(logoutUser());
+      return rejectWithValue("Invalid token");
+    }
   }
-});
+);
 
-export const loginUser = createAsyncThunk("user/login", async ({ email, password }, { dispatch, rejectWithValue }) => {
-  try {
-    const response = await api.post("/api/auth/login", { email, password });
-    const { user, token } = response.data;
-
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("accessToken", token);
-    Cookies.set("accessToken", token, { expires: 7 });
-
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    dispatch(setUser(user));
-
-    toast.success("Login successful!");
-    return user;
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Login failed");
-    return rejectWithValue(err.response?.data || "Login failed");
+export const registerUser = createAsyncThunk(
+  "user/register",
+  async ({ displayName, email, password }, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/api/auth/register", {
+        displayName,
+        email,
+        password,
+      });
+      toast.success("Registration successful! 🎉");
+      return response.data.user;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Registration failed");
+      return rejectWithValue(err.response?.data || "Registration failed");
+    }
   }
-});
+);
 
-export const logoutUser = createAsyncThunk("user/logout", async (_, { dispatch, rejectWithValue }) => {
-  try {
-    await api.post("/api/auth/logout");
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    Cookies.remove("accessToken");
+export const loginUser = createAsyncThunk(
+  "user/login",
+  async ({ email, password }, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await api.post("/api/auth/login", { email, password });
+      const { user, token } = response.data;
 
-    delete api.defaults.headers.common["Authorization"];
+      Cookies.set("accessToken", token, { expires: 7 });
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
-    dispatch(setUser(null));
-    toast.success("Logout successful!");
-  } catch (err) {
-    toast.error("Logout failed");
-    return rejectWithValue(err.response?.data || "Logout failed");
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      dispatch(setUser(user));
+      toast.success("Login successful!");
+      return user;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Login failed");
+      return rejectWithValue(err.response?.data || "Login failed");
+    }
   }
-});
+);
 
-export const updateProfile = createAsyncThunk("user/updateProfile", async (formData, { rejectWithValue }) => {
-  try {
-    const res = await api.put("/api/auth/update-profile", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    toast.success("Profile updated successfully!");
-    return res.data;
-  } catch (err) {
-    toast.error("Failed to update profile");
-    return rejectWithValue(err.response?.data || "Failed to update profile");
+export const logoutUser = createAsyncThunk(
+  "user/logout",
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      await api.post("/api/auth/logout");
+
+      // Hapus token di localStorage & cookies
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
+      Cookies.remove("accessToken");
+
+      // Hapus token di axios default headers
+      delete api.defaults.headers.common["Authorization"];
+
+      await persistor.purge(); 
+
+      toast.success("Logout successful!");
+    } catch (err) {
+      toast.error("Logout failed");
+      return rejectWithValue(err.response?.data || "Logout failed");
+    }
   }
-});
+);
+
+export const updateProfile = createAsyncThunk(
+  "user/updateProfile",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const res = await api.put("/api/auth/update-profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Profile updated successfully!");
+      return res.data;
+    } catch (err) {
+      toast.error("Failed to update profile");
+      return rejectWithValue(err.response?.data || "Failed to update profile");
+    }
+  }
+);
 
 const userSlice = createSlice({
   name: "user",
@@ -134,9 +201,12 @@ const userSlice = createSlice({
     builder
       .addCase(verifyToken.fulfilled, (state, action) => {
         state.user = action.payload;
+        state.error = null;
       })
-      .addCase(verifyToken.rejected, (state) => {
+      .addCase(verifyToken.rejected, (state, action) => {
+        console.log("verifyToken REJECTED:", action.error);
         state.user = null;
+        state.error = action.payload;
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.user = action.payload;
@@ -145,6 +215,7 @@ const userSlice = createSlice({
         state.user = action.payload;
       })
       .addCase(logoutUser.fulfilled, (state) => {
+        console.log("✅ Logout sukses, reset user Redux");
         state.user = null;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {

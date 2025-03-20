@@ -14,10 +14,13 @@ import "react-toastify/dist/ReactToastify.css";
 import useJobs from "./hooks/useJobs";
 import PrivateRoute from "./components/PrivateRoute";
 import axios from "axios";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setUser, logoutUser } from "./redux/slices/userSlice";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
+import { PersistGate } from "redux-persist/integration/react";
+import { store, persistor } from "./redux/store";
+import { verifyToken } from "./redux/slices/userSlice";
 
 // Lazy-loaded components
 import Navbar from "./components/Navbar";
@@ -74,93 +77,46 @@ const AppContent = () => {
 
   const [isTokenVerified, setIsTokenVerified] = useState(false);
   const [isPersisted, setIsPersisted] = useState(false);
-  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // ✅ Tambahkan ini
+  
+  // ✅ Ambil user dari Redux agar tetap login setelah refresh
+  const user = useSelector((state) => state.user.user);
+  const isUserLoggedIn = !!user; 
 
-  // ✅ Tunggu Redux Persist selesai sebelum mulai verifikasi user
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setIsPersisted(true);
-    }, 1000);
+    // ✅ Tunggu Redux Persist selesai sebelum mulai verifikasi user
+ // ✅ Pastikan Redux Persist selesai dulu
+useEffect(() => {
+  const timeout = setTimeout(() => {
+    setIsPersisted(true);
+  }, 1000);
+  return () => clearTimeout(timeout);
+}, []);
 
-    return () => clearTimeout(timeout);
-  }, []);
+// ✅ Gunakan Redux Thunk verifyToken untuk verifikasi token
+useEffect(() => {
+  if (!isPersisted) return; // Tunggu Redux Persist selesai dulu
 
-  // ✅ Verifikasi Token Jika Ada
-  useEffect(() => {
-    if (!isPersisted) return; // Pastikan Redux Persist selesai dulu
-
-    const token = localStorage.getItem("accessToken") || Cookies.get("accessToken");
-
-    if (!token) {
-      console.log("❌ Tidak ada token, mengarahkan ke login...");
+  dispatch(verifyToken())
+    .unwrap()
+    .then((user) => {
+      console.log("✅ Token valid, user ditemukan:", user);
+    })
+    .catch((error) => {
+      console.error("❌ Token tidak valid, harus logout:", error);
+    })
+    .finally(() => {
+      console.log("🔄 Verifikasi token selesai.");
       setIsTokenVerified(true);
-      navigate("/login");
-      return;
-    }
+    });
+}, [isPersisted, dispatch]);
 
-    // Jika ada token, lakukan verifikasi
-    axios
-      .get("/api/auth/verify-token")
-      .then((response) => {
-        if (response.data.user) {
-          dispatch(setUser(response.data.user));
-          setIsUserLoggedIn(true); // ✅ Tandai bahwa user benar-benar login
-          setIsTokenVerified(true);
-        } else {
-          console.log("❌ Token tidak valid, logout...");
-          dispatch(logoutUser());
-          localStorage.removeItem("accessToken");
-          Cookies.remove("accessToken");
-          navigate("/login");
-        }
-      })
-      .catch((error) => {
-        console.error("Token verification failed:", error);
-        dispatch(logoutUser());
-        localStorage.removeItem("accessToken");
-        Cookies.remove("accessToken");
-        navigate("/login");
-      });
-  }, [isPersisted, dispatch, navigate]);
-
-  // ✅ Cek User dari localStorage dengan aman
-  useEffect(() => {
-    if (!isPersisted) return; // Pastikan Redux Persist selesai dulu
+useEffect(() => {
+  if (!isPersisted || !isTokenVerified) return; 
   
-    const token = localStorage.getItem("accessToken") || Cookies.get("accessToken");
-  
-    if (!token) {
-      console.log("❌ Tidak ada token, mengarahkan ke login...");
-      setIsTokenVerified(true);
-      navigate("/login");
-      return;
-    }
-  
-    // Jika ada token, lakukan verifikasi
-    axios
-      .get("/api/auth/verify-token")
-      .then((response) => {
-        if (response.data.user) {
-          dispatch(setUser(response.data.user));
-          setIsUserLoggedIn(true); // ✅ Tandai bahwa user benar-benar login
-          setIsTokenVerified(true);
-        } else {
-          console.log("❌ Token tidak valid, logout...");
-          dispatch(logoutUser());
-          localStorage.removeItem("accessToken");
-          Cookies.remove("accessToken");
-          navigate("/login");
-        }
-      })
-      .catch((error) => {
-        console.error("Token verification failed:", error);
-        dispatch(logoutUser());
-        localStorage.removeItem("accessToken");
-        Cookies.remove("accessToken");
-        navigate("/login");
-      });
-  }, [isPersisted, dispatch, navigate]);
-  
+  if (!isUserLoggedIn) {
+    console.log("🚀 Token tidak valid, redirect ke login...");
+    navigate("/login");
+  }
+}, [isPersisted, isTokenVerified, isUserLoggedIn, navigate]);
 
   // ✅ Jangan tampilkan halaman jika persist atau token belum selesai
   if (!isPersisted || !isTokenVerified) {
@@ -231,6 +187,7 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider>
+    <PersistGate loading={null} persistor={persistor}>
       <Suspense
         fallback={
           <div className="flex justify-center items-center h-screen bg-white dark:bg-gray-900">
@@ -240,6 +197,7 @@ const App = () => {
       >
         <AppContent />
       </Suspense>
+      </PersistGate>
     </ThemeProvider>
   );
 };

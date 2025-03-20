@@ -11,8 +11,19 @@ import { motion } from "framer-motion";
 axios.defaults.withCredentials = true;
 
 export default function Dashboard() {
+  useEffect(() => {
+    console.log("✅ Dashboard Page Loaded!");
+  }, []);
+
   const navigate = useNavigate();
-  const { user, loading: isUserLoading } = useSelector((state) => state.user); 
+  const { user, loading: isUserLoading, _persist } = useSelector((state) => ({
+    user: state.user,
+    loading: state.user.loading,
+    _persist: state.user._persist, 
+  }));
+  
+  const isPersisted = _persist?.rehydrated ?? false;   
+
   const { jobs = [], setJobs, handleUnapplyJob } = useJobs() ?? {};
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,23 +42,24 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (isUserLoading || !user?.id) return;
+    if (!isPersisted || isUserLoading) return;
 
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken || !user?.id) {
+      console.log("🚀 Token tidak valid atau user belum terautentikasi, redirect ke login...");
+      navigate("/login");
+      return;
+    }
+  
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) {
-          navigate("/login");
-          return;
-        }
-
         const userRes = await axios.get(`${API_BASE_URL}/api/auth/dashboard`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           withCredentials: true,
         });
-
+  
         console.log("Fetched user data:", userRes.data.user);
         if (userRes?.data?.user) {
           setUserData(userRes.data.user);
@@ -60,9 +72,10 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-
+  
     fetchData();
-  }, [user?.id, isUserLoading]);
+  }, [ isPersisted, isUserLoading,user?.id, navigate, ]);
+  
 
   const removeSavedJob = async (id) => {
     console.log("Job ID:", id);
