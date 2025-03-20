@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
-import { Eye, EyeOff, Briefcase } from "lucide-react";
+import { Eye, EyeOff, Briefcase, Loader } from "lucide-react";
 import Cookies from "js-cookie";
 
 export default function Login() {
@@ -43,7 +43,7 @@ export default function Login() {
       toast.warning("Please fill in all fields!", { autoClose: 2000 });
       return;
     }
-
+    toast.info("Logging in, please wait...", { autoClose: 1000 });
     // Dispatch loginUser dengan data dari form
     dispatch(loginUser({ email: formData.email, password: formData.password }));
   };
@@ -85,6 +85,7 @@ export default function Login() {
               type="button"
               className="absolute inset-y-0 right-3 flex items-center bg-transparent dark:bg-transparent text-gray-500 dark:text-gray-400"
               onClick={() => setShowPassword(!showPassword)}
+              disabled={loading}
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
@@ -96,7 +97,14 @@ export default function Login() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105"
               disabled={loading}
             >
-              {loading ? "Logging In..." : "Login"}
+             {loading ? (
+                <>
+                  <Loader className="animate-spin mr-2" size={20} />
+                  Logging In...
+                </>
+              ) : (
+                "Login"
+              )}
             </button>
           </div>
         </form>
