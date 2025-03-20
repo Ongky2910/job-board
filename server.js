@@ -17,55 +17,66 @@ const allowedOrigins = [
   "http://localhost:5173"
 ];
 
-// ✅ Tambahkan logging middleware di sini
+// ✅ Logging Middleware
 app.use((req, res, next) => {
-  console.log(`🔵 Received ${req.method} request on ${req.url}`);
+  console.log(`🔵 ${req.method} request to ${req.url}`);
   console.log("🔵 Headers:", req.headers);
   next();
 });
 
-// ✅ Middleware utama
-app.use(cors({
-  origin: allowedOrigins,
-  methods: "GET,POST,PUT,DELETE",
-  credentials: true
-}));
-app.use(express.json()); 
-app.use(express.urlencoded({ extended: true })); // Tambahkan ini untuk form-urlencoded
-app.use(cookieParser()); 
-
-// ✅ Tambahkan logging untuk body request
+// ✅ CORS Middleware
 app.use((req, res, next) => {
-  console.log("🟢 Body received:", req.body);
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
   next();
 });
 
-// Rute dasar
+// ✅ Middleware Utama
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// ✅ Logging Body Request
+app.use((req, res, next) => {
+  if (Object.keys(req.body).length > 0) {
+    console.log("🟢 Body received:", req.body);
+  }
+  next();
+});
+
+// ✅ Rute Dasar
 app.get("/", (req, res) => {
   res.send("Welcome to the Job Board API!");
 });
 
-// Rute pekerjaan menggunakan jobRoutes
+// ✅ Rute Utama
 app.use("/api/jobs", jobRoutes);
-
-// Rute yang dilindungi dan autentikasi
 app.use("/api/auth", authRoutes);
 app.use("/api", protectedRoute);
 
-// Koneksi ke MongoDB
+// ✅ Koneksi ke MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  
 })
 .then(() => console.log("✅ Connected to MongoDB Atlas"))
 .catch((error) => {
-  console.error("❌ MongoDB connection error: ", error);
+  console.error("❌ MongoDB connection error:", error);
   process.exit(1);
 });
 
-// Memulai server
+// ✅ Memulai Server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
