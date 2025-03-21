@@ -31,7 +31,6 @@ export default function HeroSection() {
     }
   }, [dispatch]);
   
-  
 
   // Jika user state berubah, set displayName berdasarkan nama pengguna
   useEffect(() => {
