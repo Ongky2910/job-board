@@ -91,6 +91,9 @@ api.interceptors.response.use(
 export const verifyToken = createAsyncThunk(
   "user/verifyToken",
   async (_, { dispatch, rejectWithValue }) => {
+    const token = getToken(); // ✅ Cek token dulu
+    if (!token) return rejectWithValue("No token found"); // 🚀 Skip jika token kosong
+
     try {
       const res = await api.get("/api/auth/verify-token");
       return res.data.user;
@@ -102,23 +105,6 @@ export const verifyToken = createAsyncThunk(
   }
 );
 
-export const registerUser = createAsyncThunk(
-  "user/register",
-  async ({ displayName, email, password }, { rejectWithValue }) => {
-    try {
-      const response = await api.post("/api/auth/register", {
-        displayName,
-        email,
-        password,
-      });
-      toast.success("Registration successful! 🎉");
-      return response.data.user;
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
-      return rejectWithValue(err.response?.data || "Registration failed");
-    }
-  }
-);
 
 export const loginUser = createAsyncThunk(
   "user/login",
@@ -243,9 +229,6 @@ const userSlice = createSlice({
         console.log("verifyToken REJECTED:", action.error);
         state.user = null;
         state.error = action.payload;
-      })
-      .addCase(registerUser.fulfilled, (state, action) => {
-        state.user = action.payload;
       })
       .addCase(loginUser.pending, (state) => {
         state.loading = true;

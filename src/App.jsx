@@ -84,7 +84,6 @@ const AppContent = () => {
   const memoizedUser = useMemo(() => user, [user]);
   const isUserLoggedIn = useMemo(() => !!user, [user]);
 
-
   console.log("🟢 User dari Redux:", user);
   console.log("🔍 isUserLoggedIn:", isUserLoggedIn);
 
@@ -99,6 +98,13 @@ const AppContent = () => {
   // ✅ Gunakan Redux Thunk verifyToken untuk verifikasi token
   useEffect(() => {
     if (!isPersisted) return; // Tunggu Redux Persist selesai dulu
+
+    // 🚀 Cek apakah sedang di halaman /login atau /register
+    if (location.pathname === "/login" || location.pathname === "/register") {
+      console.log("🛑 Skip verifikasi token di halaman login/register");
+      setIsTokenVerified(true);
+      return;
+    }
 
     const token =
       Cookies.get("accessToken") || localStorage.getItem("accessToken");
@@ -126,6 +132,13 @@ const AppContent = () => {
 
   useEffect(() => {
     if (!isPersisted || !isTokenVerified) return;
+
+    // 🚀 Skip redirect jika user ada di halaman login atau register
+    if (location.pathname === "/login" || location.pathname === "/register") {
+      console.log("🛑 Skip redirect di halaman login/register");
+      return;
+    }
+    
     if (!isUserLoggedIn) {
       console.log("🚀 Token tidak valid, redirect ke login...");
       navigate("/login");

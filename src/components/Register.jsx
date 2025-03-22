@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { registerUser } from "../redux/slices/userSlice";
+import axios from "axios";
 import { toast } from "react-toastify";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -14,10 +13,9 @@ export default function Register() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  const dispatch = useDispatch();
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.user);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -42,22 +40,28 @@ export default function Register() {
       return;
     }
 
-    dispatch(registerUser(formData))
-      .unwrap()
-      .then(() => {
-        toast.success("Registration successful! Redirecting...");
-        setTimeout(() => navigate("/login"), 2000);
-      })
-      .catch(() => {
-        toast.error("Registration failed!");
+    setLoading(true);
+
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, {
+        displayName: formData.displayName,
+        email: formData.email,
+        password: formData.password,
       });
+
+      toast.success("Registration successful! Redirecting...");
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Registration failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
       <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700">
         <h2 className="text-2xl font-bold text-center">Create an Account</h2>
-        {error && <p className="text-red-500 text-center">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <input
             type="text"
