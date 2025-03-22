@@ -70,7 +70,7 @@ export default function Navbar() {
         <div className="flex md:hidden items-center space-x-3">
           <button 
             onClick={toggleDarkMode} 
-            className="hover:scale-110 transition duration-300 ease-in-out"
+            className="hover:scale-110 transition duration-300 ease-in-out bg-transparent"
           >
             {isDarkMode ? (
               <FiMoon size={24} className="text-gray-400 hover:text-gray-300" />
@@ -82,7 +82,7 @@ export default function Navbar() {
           {user && (
             <button 
               onClick={handleLogout} 
-              className="hover:scale-110 transition duration-300 ease-in-out"
+              className="hover:scale-110 transition duration-300 ease-in-out bg-transparent"
               title="Logout"
             >
               <FiLogOut size={24} className="text-red-500 hover:text-red-400" />
@@ -90,7 +90,7 @@ export default function Navbar() {
           )}
 
           {/* Hamburger Button */}
-          <button onClick={() => setIsOpen(!isOpen)} className="hover:scale-110 transition">
+          <button onClick={() => setIsOpen(!isOpen)} className="hover:scale-110 transition bg-transparent">
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
