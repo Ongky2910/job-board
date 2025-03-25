@@ -95,7 +95,6 @@ const { user, loading: isUserLoading } = useSelector((state) => state.user);
   }, [user?.id, appliedJobs, savedJobs]);  
 
   
-
   // ✅ Fetch pekerjaan yang sudah disimpan
   const fetchSavedJobs = useCallback(async () => {
     if (!user?.id) return;
@@ -119,12 +118,10 @@ const { user, loading: isUserLoading } = useSelector((state) => state.user);
       const [localJobsResponse, externalJobsResponse] = await Promise.all([
         axios.get(`${BASE_URL}/api/jobs`, {
           params: fetchParams,
-          withCredentials: true,
           headers: { Authorization: `Bearer ${user?.token}` },
         }),
         axios.get(`${BASE_URL}/api/jobs/external-jobs`, {
           params: fetchParams,
-          withCredentials: true,
           headers: { Authorization: `Bearer ${user?.token}` },
         }),
       ]);
