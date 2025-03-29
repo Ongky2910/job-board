@@ -114,6 +114,7 @@ const AppContent = () => {
       return;
     }
 
+    
     dispatch(verifyToken())
       .unwrap()
       .then((user) => {
