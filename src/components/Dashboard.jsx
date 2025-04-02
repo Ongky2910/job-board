@@ -53,6 +53,7 @@ export default function Dashboard({ user: memoizedUser }) {
       return;
     }
   
+    
     const fetchData = async () => {
       setLoading(true);
       console.log("✅ Fetching dashboard data...");
