@@ -36,6 +36,7 @@ import Register from "./components/Register";
 import Logout from "./components/Logout";
 import Dashboard from "./components/Dashboard";
 import EditProfile from "./pages/EditProfile";
+import Contact from "./components/Contact";
 
 // Theme Context
 const ThemeContext = createContext();
@@ -201,6 +202,7 @@ const AppContent = () => {
             )}
             <Route path="edit-profile" element={<EditProfile />} />
             <Route path="/jobs" element={<JobList jobs={jobs} isLoading={isLoading} />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
