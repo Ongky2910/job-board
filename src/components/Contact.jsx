@@ -8,14 +8,35 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+    if (!form.name) newErrors.name = "Name is required";
+    if (!form.email || !/\S+@\S+\.\S+/.test(form.email)) newErrors.email = "Please enter a valid email";
+    if (!form.message) newErrors.message = "Message is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Message sent successfully!");
+    if (validateForm()) {
+      setIsSubmitting(true);
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setSuccess(true);
+        alert("Message sent successfully!");
+      }, 1500);
+    } else {
+      alert("Please fill out all fields correctly.");
+    }
   };
 
   return (
@@ -40,10 +61,43 @@ export default function ContactPage() {
       {/* Contact Form */}
       <motion.form whileHover={{ scale: 1.02 }} onSubmit={handleSubmit} className="w-full max-w-md bg-white p-6 shadow-lg rounded-2xl">
         <h3 className="text-lg font-semibold mb-4">Get in Touch</h3>
-        <Input name="name" placeholder="Your Name" value={form.name} onChange={handleChange} className="mb-3" required />
-        <Input name="email" type="email" placeholder="Your Email" value={form.email} onChange={handleChange} className="mb-3" required />
-        <Textarea name="message" placeholder="Your Message" value={form.message} onChange={handleChange} className="mb-3" required />
-        <Button type="submit" className="w-full">Send Message</Button>
+        <Input
+          name="name"
+          placeholder="Your Name"
+          value={form.name}
+          onChange={handleChange}
+          className="mb-3"
+          required
+          aria-label="Your Name"
+        />
+        {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+        <Input
+          name="email"
+          type="email"
+          placeholder="Your Email"
+          value={form.email}
+          onChange={handleChange}
+          className="mb-3"
+          required
+          aria-label="Your Email"
+        />
+        {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+        <Textarea
+          name="message"
+          placeholder="Your Message"
+          value={form.message}
+          onChange={handleChange}
+          className="mb-3"
+          required
+          aria-label="Your Message"
+        />
+        {errors.message && <p className="text-red-500 text-sm">{errors.message}</p>}
+        <Button
+          type="submit"
+          className="w-full transition-all duration-200 ease-in-out hover:bg-green-500 hover:text-white"
+        >
+          {isSubmitting ? "Sending..." : "Send Message"}
+        </Button>
       </motion.form>
     </div>
   );
