@@ -183,7 +183,7 @@ const handleSaveJob = async (jobId) => {
     );
 
     setSavedJobs((prevSavedJobs) => [...prevSavedJobs, { id: jobId }]);
-    toast.success("💾 Job saved successfully!", { autoClose: 3000 });
+    toast.success("💾 Job saved successfully! save to dashboard", { autoClose: 3000 });
   } catch (error) {
     console.error("❌ Error saving job:", error);
     toast.error("❌ Failed to save job. Try again.");
@@ -205,7 +205,7 @@ const handleApplyJob = async (jobId) => {
 
     await fetchAppliedJobs(); // 🔄 Ambil ulang applied jobs
 
-    toast.success("📩 Successfully applied for the job!", { autoClose: 3000 });
+    toast.success("📩 Successfully applied for the job! check dashboard", { autoClose: 3000 });
   } catch (error) {
     console.error("❌ Error applying for job:", error);
     toast.error(`❌ Failed to apply: ${error.response?.data?.message || "Please try again."}`);
