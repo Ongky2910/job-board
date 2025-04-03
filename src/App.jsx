@@ -200,6 +200,7 @@ const AppContent = () => {
               </Route>
             )}
             <Route path="edit-profile" element={<EditProfile />} />
+            <Route path="/jobs" element={<JobList jobs={jobs} isLoading={isLoading} />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
