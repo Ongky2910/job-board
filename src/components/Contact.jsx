@@ -61,9 +61,9 @@ export default function ContactPage() {
   {/* Card */}
   <Card className="p-4 shadow-lg bg-white rounded-2xl z-10 relative">
     <CardContent className="flex flex-col items-center space-y-2">
-      <h2 className="text-xl font-bold">Ongky Permana</h2>
+      <h2 className="text-xl font-bold dark:text-gray-900">Ongky Permana</h2>
       <p className="text-gray-500">Full-Stack Developer</p>
-      <div className="flex space-x-4 text-gray-600 text-lg">
+      <div className="flex space-x-4 dark:text-gray-900 text-lg">
         <a href="tel:+81343607827" className="hover:text-green-500"><FaPhone /></a>
         <a href="mailto:ongkypermana21@gmail.com" className="hover:text-red-500"><FaEnvelope /></a>
         <a href="#" className="hover:text-blue-500"><FaMapMarkerAlt /></a>
