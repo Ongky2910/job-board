@@ -1,5 +1,6 @@
 import React from "react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import MapModal from "./MapModal"; 
 
 const MapModal = () => {
   return (

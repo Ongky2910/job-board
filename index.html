@@ -19,6 +19,7 @@
         alert("Error terjadi! Cek console.");
       };
 
+      
       window.onunhandledrejection = function (event) {
         console.error("Unhandled Promise Rejection:", event.reason);
         alert("Promise Error! Cek console.");
