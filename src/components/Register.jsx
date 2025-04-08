@@ -49,7 +49,6 @@ export default function Register() {
         password: formData.password,
       });
 
-      
       toast.success("Registration successful! Redirecting...");
       setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
